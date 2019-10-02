@@ -5,7 +5,6 @@ import * as util from "util"
 import {
   BalanceForAddressByTokenId,
   BalancesForAddress,
-  BalancesForToken,
   BurnTotalResult,
   ConvertResult,
   TokenInterface,
@@ -386,101 +385,12 @@ async function balancesForAddressSingle(
         error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
       })
     }
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}balancesForAddress/${address}`
+    )
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["a"],
-        find: {
-          address: SLP.Address.toSLPAddress(address),
-          token_balance: { $gte: 0 }
-        },
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const tokenRes: AxiosResponse = await axios.get(url)
-
-    let tokenIds: string[] = []
-    if (tokenRes.data.a.length > 0) {
-      tokenRes.data.a = tokenRes.data.a.map(token => {
-        token.tokenId = token.tokenDetails.tokenIdHex
-        tokenIds.push(token.tokenId)
-        token.balance = parseFloat(token.token_balance)
-        token.balanceString = token.token_balance
-        token.slpAddress = token.address
-        delete token.tokenDetails
-        delete token.satoshis_balance
-        delete token.token_balance
-        delete token._id
-        delete token.address
-        return token
-      })
-
-      const promises = tokenIds.map(async tokenId => {
-        try {
-          const query2: {
-            v: number
-            q: {
-              db: string[]
-              find: any
-              project: any
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              db: ["t"],
-              find: {
-                $query: {
-                  "tokenDetails.tokenIdHex": tokenId
-                }
-              },
-              project: {
-                "tokenDetails.decimals": 1,
-                "tokenDetails.tokenIdHex": 1,
-                _id: 0
-              },
-              limit: 1000
-            }
-          }
-
-          const s2: string = JSON.stringify(query2)
-          const b642: string = Buffer.from(s2).toString("base64")
-          const url2: string = `${process.env.SLPDB_URL}q/${b642}`
-
-          const tokenRes2: AxiosResponse = await axios.get(url2)
-          return tokenRes2.data
-        } catch (err) {
-          throw err
-        }
-      })
-
-      const details: BalancesForAddress[] = await axios.all(promises)
-      tokenRes.data.a = tokenRes.data.a.map((token: any): any => {
-        details.forEach((detail: any): any => {
-          if (detail.t[0].tokenDetails.tokenIdHex === token.tokenId) {
-            token.decimalCount = detail.t[0].tokenDetails.decimals
-          }
-        })
-        return token
-      })
-
-      return res.json(tokenRes.data.a)
-    } else {
-      return res.json([])
-    }
+    res.status(200)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddress().`, err)
 
@@ -685,45 +595,11 @@ async function balancesForTokenSingle(
       res.status(400)
       return res.json({ error: "tokenId can not be empty" })
     }
-
-    const query: {
-      v: number
-      q: {
-        find: any
-        project: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        find: {
-          "tokenDetails.tokenIdHex": tokenId,
-          token_balance: { $gte: 0 }
-        },
-        limit: 10000,
-        project: { address: 1, satoshis_balance: 1, token_balance: 1, _id: 0 }
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url)
-    let resBalances: BalancesForToken[] = tokenRes.data.a.map(
-      (addy: any): any => {
-        delete addy.satoshis_balance
-        addy.tokenBalance = parseFloat(addy.token_balance)
-        addy.tokenBalanceString = addy.token_balance
-        addy.slpAddress = addy.address
-        addy.tokenId = tokenId
-        delete addy.address
-        delete addy.token_balance
-        return addy
-      }
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}balancesForToken/${tokenId}`
     )
-    return res.json(resBalances)
+    res.status(200)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForTokenSingle().`, err)
 
@@ -884,65 +760,11 @@ async function balancesForAddressByTokenIDSingle(
 
     // Convert input to an simpleledger: address.
     const slpAddr: string = utils.toSlpAddress(req.params.address)
-
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["a"],
-        find: {
-          address: slpAddr,
-          token_balance: { $gte: 0 }
-        },
-        limit: 10
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse<any> = await axios.get(url)
-    let resVal: BalanceForAddressByTokenId = {
-      cashAddress: utils.toCashAddress(slpAddr),
-      legacyAddress: utils.toLegacyAddress(slpAddr),
-      slpAddress: slpAddr,
-      tokenId: tokenId,
-      balance: 0,
-      balanceString: "0"
-    }
-    if (tokenRes.data.a.length > 0) {
-      tokenRes.data.a.forEach((token: any): any => {
-        if (token.tokenDetails.tokenIdHex === tokenId) {
-          resVal = {
-            cashAddress: utils.toCashAddress(slpAddr),
-            legacyAddress: utils.toLegacyAddress(slpAddr),
-            slpAddress: slpAddr,
-            tokenId: token.tokenDetails.tokenIdHex,
-            balance: parseFloat(token.token_balance),
-            balanceString: token.token_balance
-          }
-        }
-      })
-    } else {
-      resVal = {
-        cashAddress: utils.toCashAddress(slpAddr),
-        legacyAddress: utils.toLegacyAddress(slpAddr),
-        slpAddress: slpAddr,
-        tokenId: tokenId,
-        balance: 0,
-        balanceString: "0"
-      }
-    }
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}balance/${slpAddr}/${tokenId}`
+    )
     res.status(200)
-    return res.json(resVal)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddressByTokenID().`, err)
 
@@ -1269,23 +1091,11 @@ async function validateSingle(
     }
 
     logger.debug(`Executing slp/validate/:txid with this txid: `, txid)
-
-    // Validate txid
-    // Dev note: must call module.exports to allow stubs in unit tests.
-    const isValid: Promise<
-      boolean
-    > = await module.exports.testableComponents.isValidSlpTxid(txid)
-
-    let tmp: ValidateTxidResult = {
-      txid: txid,
-      valid: isValid ? true : false
-    }
-    if (!isValid) {
-      tmp.invalidReason = slpValidator.cachedValidations[txid].invalidReason
-    }
-
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}validateTxid/${txid}`
+    )
     res.status(200)
-    return res.json(tmp)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/validateSingle().`, err)
 
