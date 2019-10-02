@@ -1124,59 +1124,11 @@ async function burnTotalSingle(
 ): Promise<express.Response> {
   try {
     let txid: string = req.params.transactionId
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        aggregate: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["g"],
-        aggregate: [
-          {
-            $match: {
-              "graphTxn.txid": txid
-            }
-          },
-          {
-            $project: {
-              "graphTxn.txid": 1,
-              inputTotal: { $sum: "$graphTxn.inputs.slpAmount" },
-              outputTotal: { $sum: "$graphTxn.outputs.slpAmount" }
-            }
-          }
-        ],
-        limit: 1000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url)
-
-    let burnTotal: BurnTotalResult = {
-      transactionId: txid,
-      inputTotal: 0,
-      outputTotal: 0,
-      burnTotal: 0
-    }
-
-    if (tokenRes.data.g.length) {
-      let inputTotal: number = parseFloat(tokenRes.data.g[0].inputTotal)
-      let outputTotal: number = parseFloat(tokenRes.data.g[0].outputTotal)
-      burnTotal.inputTotal = inputTotal
-      burnTotal.outputTotal = outputTotal
-      burnTotal.burnTotal = inputTotal - outputTotal
-    }
-
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}burnTotal/${txid}`
+    )
     res.status(200)
-    return res.json(burnTotal)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/burnTotalSingle().`, err)
 
@@ -1555,24 +1507,12 @@ async function txDetails(
       return res.json({ error: "This is not a txid" })
     }
 
-    let tmpSLP: any
-    if (process.env.NETWORK === "testnet")
-      tmpSLP = new SLPSDK({ restURL: process.env.TREST_URL })
-    else tmpSLP = new SLPSDK({ restURL: process.env.REST_URL })
-
-    const tmpbitboxNetwork: any = new slp.BitboxNetwork(tmpSLP, slpValidator)
-
-    // Get TX info + token info
-    // Wrapped in a testable function so that it can be stubbed for unit tests.
-    const result: Promise<
-      any
-    > = await module.exports.testableComponents.getSlpjsTxDetails(
-      tmpbitboxNetwork,
-      txid
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}txDetails/${txid}`
     )
 
     res.status(200)
-    return res.json(result)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/txDetails().`, err)
 
@@ -1594,18 +1534,6 @@ async function txDetails(
   }
 }
 
-// This function is a simple wrapper to make unit tests possible.
-// It expects an instance of the slpjs BitboxNetwork class as input.
-// Wrapping this in a function allows it to be stubbed so that the txDetails
-// route can be tested as a unit test.
-async function getSlpjsTxDetails(slpjsBitboxNetworkInstance, txid) {
-  const result: Promise<
-    any
-  > = await slpjsBitboxNetworkInstance.getTransactionDetails(txid)
-
-  return result
-}
-
 async function tokenStatsSingle(
   req: express.Request,
   res: express.Response,
@@ -1618,49 +1546,12 @@ async function tokenStatsSingle(
   }
 
   try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 10
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const tokenRes: AxiosResponse<any> = await axios.get(url)
-
-    let formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}tokenStats/${tokenId}`
+    )
 
     res.status(200)
-    return res.json(formattedTokens[0])
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/tokenStats().`, err)
 
@@ -1964,7 +1855,6 @@ module.exports = {
     sendTokenType1,
     burnTokenType1,
     txDetails,
-    getSlpjsTxDetails,
     tokenStatsSingle,
     tokenStatsBulk,
     balancesForTokenSingle,
