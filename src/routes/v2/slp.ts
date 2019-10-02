@@ -1671,45 +1671,12 @@ async function txsTokenIdAddressSingle(
       return res.json({ error: "address can not be empty" })
     }
 
-    const query: {
-      v: number
-      q: any
-      r: any
-    } = {
-      v: 3,
-      q: {
-        find: {
-          db: ["c", "u"],
-          $query: {
-            $or: [
-              {
-                "in.e.a": address
-              },
-              {
-                "out.e.a": address
-              }
-            ],
-            "slp.detail.tokenIdHex": tokenId
-          },
-          $orderby: {
-            "blk.i": -1
-          }
-        },
-        limit: 100
-      },
-      r: {
-        f: "[.[] | { txid: .tx.h, tokenDetails: .slp } ]"
-      }
-    }
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}transactions/${tokenId}/${address}`
+    )
 
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url)
-
-    return res.json(tokenRes.data.c)
+    res.status(200)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
 
