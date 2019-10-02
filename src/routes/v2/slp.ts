@@ -272,62 +272,12 @@ async function listBulkToken(
       })
     }
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        sort: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          "tokenDetails.tokenIdHex": {
-            $in: tokenIds
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        sort: { "tokenStats.block_created": -1 },
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const tokenRes: AxiosResponse = await axios.get(url)
-
-    let formattedTokens: any[] = []
-    let txids: string[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        txids.push(token.tokenDetails.tokenIdHex)
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
-
-    tokenIds.forEach((tokenId: string) => {
-      if (!txids.includes(tokenId)) {
-        formattedTokens.push({
-          id: tokenId,
-          valid: false
-        })
-      }
+    const tokenRes: AxiosResponse = await axios.post(`${slpRESTUrl}list`, {
+      tokenIds: tokenIds
     })
 
     res.status(200)
-    return res.json(formattedTokens)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/listBulkToken().`, err)
 
