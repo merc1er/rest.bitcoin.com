@@ -2,14 +2,7 @@
 import axios, { AxiosResponse } from "axios"
 import * as express from "express"
 import * as util from "util"
-import {
-  BalanceForAddressByTokenId,
-  BalancesForAddress,
-  BurnTotalResult,
-  ConvertResult,
-  TokenInterface,
-  ValidateTxidResult
-} from "./interfaces/RESTInterfaces"
+import { ConvertResult, TokenInterface } from "./interfaces/RESTInterfaces"
 import logger = require("./logging.js")
 import routeUtils = require("./route-utils")
 import wlogger = require("../../util/winston-logging")
@@ -22,7 +15,6 @@ const slp: any = SLP.slpjs
 const utils: any = slp.Utils
 const level: any = require("level")
 const slpTxDb: any = level("./slp-tx-db")
-const slpRESTUrl: string = "http://localhost:3001/v2/slp/"
 
 // Used to convert error messages to strings, to safely pass to users.
 util.inspect.defaultOptions = { depth: 5 }
@@ -32,6 +24,10 @@ util.inspect.defaultOptions = { depth: 5 }
 if (!process.env.REST_URL) process.env.REST_URL = `https://rest.bitcoin.com/v2/`
 if (!process.env.TREST_URL)
   process.env.TREST_URL = `https://trest.bitcoin.com/v2/`
+if (!process.env.SLP_REST_URL)
+  process.env.SLP_REST_URL = `http://localhost:3001/v2/slp/`
+
+const slpRESTUrl: string = process.env.SLP_REST_URL
 
 router.get("/", root)
 router.get("/list", list)
@@ -183,12 +179,14 @@ function formatTokenOutput(token: any): TokenInterface {
   return token
 }
 
-function root(
+async function root(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-): express.Response {
-  return res.json({ status: "slp" })
+): Promise<express.Response> {
+  const tokenRes: AxiosResponse = await axios.get(`${slpRESTUrl}`)
+  res.status(200)
+  return res.json(tokenRes.data)
 }
 
 async function list(
@@ -287,68 +285,6 @@ async function listBulkToken(
     }
     res.status(500)
     return res.json({ error: `Error in /list/:tokenId: ${err.message}` })
-  }
-}
-
-async function lookupToken(tokenId: string): Promise<any> {
-  try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 1000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const tokenRes: AxiosResponse = await axios.get(url)
-
-    let formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
-
-    let t: any
-    formattedTokens.forEach((token: any) => {
-      if (token.id === tokenId) t = token
-    })
-
-    // If token could not be found.
-    if (t === undefined) {
-      t = {
-        id: "not found"
-      }
-    }
-
-    return t
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/lookupToken().`, err)
-    throw err
   }
 }
 
@@ -464,107 +400,14 @@ async function balancesForAddressBulk(
       }
     })
 
-    const balancesPromises: Promise<any>[] = addresses.map(
-      async (address: string) => {
-        try {
-          const query: {
-            v: number
-            q: {
-              db: string[]
-              find: any
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              db: ["a"],
-              find: {
-                address: SLP.Address.toSLPAddress(address),
-                token_balance: { $gte: 0 }
-              },
-              limit: 10000
-            }
-          }
-
-          const s: string = JSON.stringify(query)
-          const b64: string = Buffer.from(s).toString("base64")
-          const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-          const tokenRes: AxiosResponse<any> = await axios.get(url)
-
-          let tokenIds: string[] = []
-
-          if (tokenRes.data.a.length > 0) {
-            tokenRes.data.a = tokenRes.data.a.map(token => {
-              token.tokenId = token.tokenDetails.tokenIdHex
-              tokenIds.push(token.tokenId)
-              token.balance = parseFloat(token.token_balance)
-              token.balanceString = token.token_balance
-              token.slpAddress = token.address
-              delete token.tokenDetails
-              delete token.satoshis_balance
-              delete token.token_balance
-              delete token._id
-              delete token.address
-              return token
-            })
-          }
-          const promises = tokenIds.map(async tokenId => {
-            try {
-              const query2: {
-                v: number
-                q: {
-                  db: string[]
-                  find: any
-                  project: any
-                  limit: number
-                }
-              } = {
-                v: 3,
-                q: {
-                  db: ["t"],
-                  find: {
-                    $query: {
-                      "tokenDetails.tokenIdHex": tokenId
-                    }
-                  },
-                  project: {
-                    "tokenDetails.decimals": 1,
-                    "tokenDetails.tokenIdHex": 1,
-                    _id: 0
-                  },
-                  limit: 1000
-                }
-              }
-
-              const s2: string = JSON.stringify(query2)
-              const b642: string = Buffer.from(s2).toString("base64")
-              const url2: string = `${process.env.SLPDB_URL}q/${b642}`
-
-              const tokenRes2: AxiosResponse = await axios.get(url2)
-              return tokenRes2.data
-            } catch (err) {
-              throw err
-            }
-          })
-          const details: BalancesForAddress[] = await axios.all(promises)
-          tokenRes.data.a = tokenRes.data.a.map((token: any): any => {
-            details.forEach((detail: any): any => {
-              if (detail.t[0].tokenDetails.tokenIdHex === token.tokenId) {
-                token.decimalCount = detail.t[0].tokenDetails.decimals
-              }
-            })
-            return token
-          })
-
-          return tokenRes.data.a
-        } catch (err) {
-          throw err
-        }
+    const tokenRes: AxiosResponse = await axios.post(
+      `${slpRESTUrl}balancesForAddress`,
+      {
+        addresses: addresses
       }
     )
-    const axiosResult: any[] = await axios.all(balancesPromises)
-    return res.json(axiosResult)
+    res.status(200)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddress().`, err)
 
@@ -649,58 +492,14 @@ async function balancesForTokenBulk(
       }
     })
 
-    const tokenIdPromises: Promise<any>[] = tokenIds.map(
-      async (tokenId: string) => {
-        try {
-          const query: {
-            v: number
-            q: {
-              find: any
-              project: any
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              find: {
-                "tokenDetails.tokenIdHex": tokenId,
-                token_balance: { $gte: 0 }
-              },
-              limit: 10000,
-              project: {
-                address: 1,
-                satoshis_balance: 1,
-                token_balance: 1,
-                _id: 0
-              }
-            }
-          }
-          const s: string = JSON.stringify(query)
-          const b64: string = Buffer.from(s).toString("base64")
-          const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-          // Get data from SLPDB.
-          const tokenRes: AxiosResponse = await axios.get(url)
-
-          let resBalances = tokenRes.data.a.map((addy: any): any => {
-            delete addy.satoshis_balance
-            addy.tokenBalance = parseFloat(addy.token_balance)
-            addy.tokenBalanceString = addy.token_balance
-            addy.slpAddress = addy.address
-            addy.tokenId = tokenId
-            delete addy.address
-            delete addy.token_balance
-            return addy
-          })
-          return resBalances
-        } catch (err) {
-          throw err
-        }
+    const tokenRes: AxiosResponse = await axios.post(
+      `${slpRESTUrl}balancesForToken`,
+      {
+        tokenIds: tokenIds
       }
     )
-    const axiosResult: any[] = await axios.all(tokenIdPromises)
     res.status(200)
-    return res.json(axiosResult)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForTokenSingle().`, err)
 
@@ -820,79 +619,13 @@ async function balancesForAddressByTokenIDBulk(
         })
       }
     })
-    const tokenIdPromises: Promise<any>[] = req.body.map(async (data: any) => {
-      try {
-        // Convert input to an simpleledger: address.
-        const slpAddr: string = utils.toSlpAddress(data.address)
-        // const slpAddr: string = data.address
 
-        const query: {
-          v: number
-          q: {
-            db: string[]
-            find: any
-            limit: number
-          }
-        } = {
-          v: 3,
-          q: {
-            db: ["a"],
-            find: {
-              address: slpAddr,
-              token_balance: { $gte: 0 }
-            },
-            limit: 10
-          }
-        }
-
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        // Get data from SLPDB.
-        const tokenRes: AxiosResponse<any> = await axios.get(url)
-
-        let resVal: BalanceForAddressByTokenId = {
-          cashAddress: utils.toCashAddress(slpAddr),
-          legacyAddress: utils.toLegacyAddress(slpAddr),
-          slpAddress: slpAddr,
-          tokenId: data.tokenId,
-          balance: 0,
-          balanceString: "0"
-        }
-        if (tokenRes.data.a.length > 0) {
-          tokenRes.data.a.forEach(
-            async (token: any): Promise<any> => {
-              if (token.tokenDetails.tokenIdHex === data.tokenId) {
-                resVal = {
-                  cashAddress: utils.toCashAddress(data.address),
-                  legacyAddress: utils.toLegacyAddress(data.address),
-                  slpAddress: data.address,
-                  tokenId: token.tokenDetails.tokenIdHex,
-                  balance: parseFloat(token.token_balance),
-                  balanceString: token.token_balance
-                }
-              }
-            }
-          )
-        } else {
-          resVal = {
-            cashAddress: utils.toCashAddress(data.address),
-            legacyAddress: utils.toLegacyAddress(data.address),
-            slpAddress: data.address,
-            tokenId: data.tokenId,
-            balance: 0,
-            balanceString: "0"
-          }
-        }
-        return resVal
-      } catch (err) {
-        throw err
-      }
-    })
-    const axiosResult: any[] = await axios.all(tokenIdPromises)
+    const tokenRes: AxiosResponse = await axios.post(
+      `${slpRESTUrl}balance`,
+      req.body
+    )
     res.status(200)
-    return res.json(axiosResult)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddressByTokenID().`, err)
 
@@ -1028,39 +761,14 @@ async function validateBulk(
 
     logger.debug(`Executing slp/validate with these txids: `, txids)
 
-    // Validate each txid
-    const validatePromises: Promise<any>[] = txids.map(async txid => {
-      try {
-        // Dev note: must call module.exports to allow stubs in unit tests.
-        const isValid: Promise<
-          boolean
-        > = await module.exports.testableComponents.isValidSlpTxid(txid)
-
-        let tmp: {
-          txid: string
-          valid: boolean
-          invalidReason?: string
-        } = {
-          txid: txid,
-          valid: isValid ? true : false
-        }
-        if (!isValid) {
-          tmp.invalidReason = slpValidator.cachedValidations[txid].invalidReason
-        }
-        return tmp
-      } catch (err) {
-        throw err
+    const tokenRes: AxiosResponse = await axios.post(
+      `${slpRESTUrl}validateTxid`,
+      {
+        txids: txids
       }
-    })
-
-    // Filter array to only valid txid results
-    const validateResults: ValidateTxidResult[] = await axios.all(
-      validatePromises
     )
-    const validTxids: any[] = validateResults.filter(result => result)
-
     res.status(200)
-    return res.json(validTxids)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/validateBulk().`, err)
 
@@ -1109,12 +817,6 @@ async function validateSingle(
     res.status(500)
     return res.json({ error: util.inspect(err) })
   }
-}
-
-// Returns a Boolean if the input TXID is a valid SLP TXID.
-async function isValidSlpTxid(txid: string): Promise<boolean> {
-  const isValid: Promise<boolean> = await slpValidator.isValidSlpTxid(txid)
-  return isValid
 }
 
 async function burnTotalSingle(
@@ -1166,63 +868,11 @@ async function burnTotalBulk(
 
     logger.debug(`Executing slp/burnTotal with these txids: `, txids)
 
-    const txidPromises = txids.map(async (txid: string) => {
-      const query: {
-        v: number
-        q: {
-          db: string[]
-          aggregate: any
-          limit: number
-        }
-      } = {
-        v: 3,
-        q: {
-          db: ["g"],
-          aggregate: [
-            {
-              $match: {
-                "graphTxn.txid": txid
-              }
-            },
-            {
-              $project: {
-                "graphTxn.txid": 1,
-                inputTotal: { $sum: "$graphTxn.inputs.slpAmount" },
-                outputTotal: { $sum: "$graphTxn.outputs.slpAmount" }
-              }
-            }
-          ],
-          limit: 1000
-        }
-      }
-
-      const s: string = JSON.stringify(query)
-      const b64: string = Buffer.from(s).toString("base64")
-      const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-      // Get data from SLPDB.
-      const tokenRes = await axios.get(url)
-      let burnTotal: BurnTotalResult = {
-        transactionId: txids[0],
-        inputTotal: 0,
-        outputTotal: 0,
-        burnTotal: 0
-      }
-      if (tokenRes.data.g >= 1) {
-        if (tokenRes.data.g.length) {
-          let inputTotal: number = parseFloat(tokenRes.data.g[0].inputTotal)
-          let outputTotal: number = parseFloat(tokenRes.data.g[0].outputTotal)
-          burnTotal.inputTotal = inputTotal
-          burnTotal.outputTotal = outputTotal
-          burnTotal.burnTotal = inputTotal - outputTotal
-        }
-      }
-      return burnTotal
+    const tokenRes: AxiosResponse = await axios.post(`${slpRESTUrl}burnTotal`, {
+      txids: txids
     })
-    const axiosResult = await axios.all(txidPromises)
-
     res.status(200)
-    return res.json(axiosResult)
+    return res.json(tokenRes.data)
   } catch (err) {
     wlogger.error(`Error in slp.ts/burnTotalSingle().`, err)
 
@@ -1233,6 +883,219 @@ async function burnTotalBulk(
     }
     res.status(500)
     return res.json({ error: `Error in /burnTotal: ${err.message}` })
+  }
+}
+
+async function txDetails(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    // Validate input parameter
+    const txid: string = req.params.txid
+    if (!txid || txid === "") {
+      res.status(400)
+      return res.json({ error: "txid can not be empty" })
+    }
+
+    if (txid.length !== 64) {
+      res.status(400)
+      return res.json({ error: "This is not a txid" })
+    }
+
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}txDetails/${txid}`
+    )
+
+    res.status(200)
+    return res.json(tokenRes.data)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txDetails().`, err)
+
+    // Attempt to decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    // Handle corner case of mis-typted txid
+    if (err.error.indexOf("Not found") > -1) {
+      res.status(400)
+      return res.json({ error: "TXID not found" })
+    }
+
+    res.status(500)
+    return res.json({ error: util.inspect(err) })
+  }
+}
+
+async function tokenStatsSingle(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  let tokenId: string = req.params.tokenId
+  if (!tokenId || tokenId === "") {
+    res.status(400)
+    return res.json({ error: "tokenId can not be empty" })
+  }
+
+  try {
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}tokenStats/${tokenId}`
+    )
+
+    res.status(200)
+    return res.json(tokenRes.data)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/tokenStats().`, err)
+
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+    res.status(500)
+    return res.json({ error: `Error in /tokenStats: ${err.message}` })
+  }
+}
+
+async function tokenStatsBulk(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  let tokenIds: string[] = req.body.tokenIds
+
+  // Reject if hashes is not an array.
+  if (!Array.isArray(tokenIds)) {
+    res.status(400)
+    return res.json({
+      error: "tokenIds needs to be an array. Use GET for single tokenId."
+    })
+  }
+
+  // Enforce array size rate limits
+  if (!routeUtils.validateArraySize(req, tokenIds)) {
+    res.status(429) // https://github.com/Bitcoin-com/rest.bitcoin.com/issues/330
+    return res.json({
+      error: `Array too large.`
+    })
+  }
+
+  logger.debug(`Executing slp/tokenStats with these tokenIds: `, tokenIds)
+
+  const tokenRes: AxiosResponse = await axios.post(`${slpRESTUrl}tokenStats`, {
+    tokenIds: tokenIds
+  })
+  res.status(200)
+  return res.json(tokenRes.data)
+}
+
+// Retrieve transactions by tokenId and address.
+async function txsTokenIdAddressSingle(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    // Validate the input data.
+    let tokenId: string = req.params.tokenId
+    if (!tokenId || tokenId === "") {
+      res.status(400)
+      return res.json({ error: "tokenId can not be empty" })
+    }
+
+    let address: string = req.params.address
+    if (!address || address === "") {
+      res.status(400)
+      return res.json({ error: "address can not be empty" })
+    }
+
+    const tokenRes: AxiosResponse = await axios.get(
+      `${slpRESTUrl}transactions/${tokenId}/${address}`
+    )
+
+    res.status(200)
+    return res.json(tokenRes.data)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactions/:tokenId/:address: ${err.message}`
+    })
+  }
+}
+
+async function txsTokenIdAddressBulk(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    req.body.forEach((r: any) => {
+      // Validate input data.
+      if (!r.address || r.address === "") {
+        res.status(400)
+        return res.json({ error: "address can not be empty" })
+      }
+
+      if (!r.tokenId || r.tokenId === "") {
+        res.status(400)
+        return res.json({ error: "tokenId can not be empty" })
+      }
+
+      // Ensure the input is a valid BCH address.
+      try {
+        utils.toCashAddress(r.address)
+      } catch (err) {
+        res.status(400)
+        return res.json({
+          error: `Invalid BCH address. Double check your address is valid: ${r.address}`
+        })
+      }
+
+      // Prevent a common user error. Ensure they are using the correct network address.
+      let cashAddr: string = utils.toCashAddress(r.address)
+      const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
+      if (!networkIsValid) {
+        res.status(400)
+        return res.json({
+          error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
+        })
+      }
+    })
+
+    const tokenRes: AxiosResponse = await axios.post(
+      `${slpRESTUrl}transactions`,
+      req.body
+    )
+    res.status(200)
+    return res.json(tokenRes.data)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactions/:tokenId/:address: ${err.message}`
+    })
   }
 }
 
@@ -1489,319 +1352,6 @@ async function burnTokenType1(
   return res.json(burn)
 }
 
-async function txDetails(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  try {
-    // Validate input parameter
-    const txid: string = req.params.txid
-    if (!txid || txid === "") {
-      res.status(400)
-      return res.json({ error: "txid can not be empty" })
-    }
-
-    if (txid.length !== 64) {
-      res.status(400)
-      return res.json({ error: "This is not a txid" })
-    }
-
-    const tokenRes: AxiosResponse = await axios.get(
-      `${slpRESTUrl}txDetails/${txid}`
-    )
-
-    res.status(200)
-    return res.json(tokenRes.data)
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/txDetails().`, err)
-
-    // Attempt to decode the error message.
-    const { msg, status } = routeUtils.decodeError(err)
-    if (msg) {
-      res.status(status)
-      return res.json({ error: msg })
-    }
-
-    // Handle corner case of mis-typted txid
-    if (err.error.indexOf("Not found") > -1) {
-      res.status(400)
-      return res.json({ error: "TXID not found" })
-    }
-
-    res.status(500)
-    return res.json({ error: util.inspect(err) })
-  }
-}
-
-async function tokenStatsSingle(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  let tokenId: string = req.params.tokenId
-  if (!tokenId || tokenId === "") {
-    res.status(400)
-    return res.json({ error: "tokenId can not be empty" })
-  }
-
-  try {
-    const tokenRes: AxiosResponse = await axios.get(
-      `${slpRESTUrl}tokenStats/${tokenId}`
-    )
-
-    res.status(200)
-    return res.json(tokenRes.data)
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/tokenStats().`, err)
-
-    const { msg, status } = routeUtils.decodeError(err)
-    if (msg) {
-      res.status(status)
-      return res.json({ error: msg })
-    }
-    res.status(500)
-    return res.json({ error: `Error in /tokenStats: ${err.message}` })
-  }
-}
-
-async function tokenStatsBulk(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  let tokenIds: string[] = req.body.tokenIds
-
-  // Reject if hashes is not an array.
-  if (!Array.isArray(tokenIds)) {
-    res.status(400)
-    return res.json({
-      error: "tokenIds needs to be an array. Use GET for single tokenId."
-    })
-  }
-
-  // Enforce array size rate limits
-  if (!routeUtils.validateArraySize(req, tokenIds)) {
-    res.status(429) // https://github.com/Bitcoin-com/rest.bitcoin.com/issues/330
-    return res.json({
-      error: `Array too large.`
-    })
-  }
-
-  logger.debug(`Executing slp/tokenStats with these tokenIds: `, tokenIds)
-
-  // Validate each txid
-  const statsPromises: Promise<any>[] = tokenIds.map(
-    async (tokenId: string) => {
-      try {
-        const query: {
-          v: number
-          q: {
-            db: string[]
-            find: any
-            project: {
-              tokenDetails: number
-              tokenStats: number
-              nftParentId: number
-              _id: number
-            }
-            limit: number
-          }
-        } = {
-          v: 3,
-          q: {
-            db: ["t"],
-            find: {
-              $query: {
-                "tokenDetails.tokenIdHex": tokenId
-              }
-            },
-            project: { tokenDetails: 1, tokenStats: 1, nftParentId: 1, _id: 0 },
-            limit: 10
-          }
-        }
-
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        const tokenRes: AxiosResponse<any> = await axios.get(url)
-
-        let formattedTokens: any[] = []
-
-        if (tokenRes.data.t.length) {
-          tokenRes.data.t.forEach((token: any) => {
-            token = formatTokenOutput(token)
-            formattedTokens.push(token.tokenDetails)
-          })
-        }
-
-        return formattedTokens[0]
-      } catch (err) {
-        throw err
-      }
-    }
-  )
-
-  // Filter array to only valid txid results
-  const statsResults: ValidateTxidResult[] = await axios.all(statsPromises)
-  const validTxids: any[] = statsResults.filter(result => result)
-
-  res.status(200)
-  return res.json(validTxids)
-}
-
-// Retrieve transactions by tokenId and address.
-async function txsTokenIdAddressSingle(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  try {
-    // Validate the input data.
-    let tokenId: string = req.params.tokenId
-    if (!tokenId || tokenId === "") {
-      res.status(400)
-      return res.json({ error: "tokenId can not be empty" })
-    }
-
-    let address: string = req.params.address
-    if (!address || address === "") {
-      res.status(400)
-      return res.json({ error: "address can not be empty" })
-    }
-
-    const tokenRes: AxiosResponse = await axios.get(
-      `${slpRESTUrl}transactions/${tokenId}/${address}`
-    )
-
-    res.status(200)
-    return res.json(tokenRes.data)
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
-
-    // Decode the error message.
-    const { msg, status } = routeUtils.decodeError(err)
-    if (msg) {
-      res.status(status)
-      return res.json({ error: msg })
-    }
-
-    res.status(500)
-    return res.json({
-      error: `Error in /transactions/:tokenId/:address: ${err.message}`
-    })
-  }
-}
-
-async function txsTokenIdAddressBulk(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  try {
-    req.body.forEach((r: any) => {
-      // Validate input data.
-      if (!r.address || r.address === "") {
-        res.status(400)
-        return res.json({ error: "address can not be empty" })
-      }
-
-      if (!r.tokenId || r.tokenId === "") {
-        res.status(400)
-        return res.json({ error: "tokenId can not be empty" })
-      }
-
-      // Ensure the input is a valid BCH address.
-      try {
-        utils.toCashAddress(r.address)
-      } catch (err) {
-        res.status(400)
-        return res.json({
-          error: `Invalid BCH address. Double check your address is valid: ${r.address}`
-        })
-      }
-
-      // Prevent a common user error. Ensure they are using the correct network address.
-      let cashAddr: string = utils.toCashAddress(r.address)
-      const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
-      if (!networkIsValid) {
-        res.status(400)
-        return res.json({
-          error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
-        })
-      }
-    })
-
-    const tokenIdPromises: Promise<any>[] = req.body.map(async (data: any) => {
-      try {
-        // Convert input to an simpleledger: address.
-        const slpAddr: string = utils.toSlpAddress(data.address)
-        // const slpAddr: string = data.address
-
-        const query: {
-          v: number
-          q: any
-          r: any
-        } = {
-          v: 3,
-          q: {
-            find: {
-              db: ["c", "u"],
-              $query: {
-                $or: [
-                  {
-                    "in.e.a": slpAddr
-                  },
-                  {
-                    "out.e.a": slpAddr
-                  }
-                ],
-                "slp.detail.tokenIdHex": data.tokenId
-              },
-              $orderby: {
-                "blk.i": -1
-              }
-            },
-            limit: 100
-          },
-          r: {
-            f: "[.[] | { txid: .tx.h, tokenDetails: .slp } ]"
-          }
-        }
-
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        // Get data from SLPDB.
-        const tokenRes: AxiosResponse = await axios.get(url)
-
-        return tokenRes.data.c
-      } catch (err) {
-        throw err
-      }
-    })
-    const axiosResult: any[] = await axios.all(tokenIdPromises)
-    res.status(200)
-    return res.json(axiosResult)
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
-
-    // Decode the error message.
-    const { msg, status } = routeUtils.decodeError(err)
-    if (msg) {
-      res.status(status)
-      return res.json({ error: msg })
-    }
-
-    res.status(500)
-    return res.json({
-      error: `Error in /transactions/:tokenId/:address: ${err.message}`
-    })
-  }
-}
-
 module.exports = {
   router,
   testableComponents: {
@@ -1816,7 +1366,6 @@ module.exports = {
     convertAddressSingle,
     convertAddressBulk,
     validateBulk,
-    isValidSlpTxid,
     createTokenType1,
     mintTokenType1,
     sendTokenType1,
