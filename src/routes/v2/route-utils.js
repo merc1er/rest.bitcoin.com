@@ -14,7 +14,7 @@ const bitbox = new BITBOX()
 
 const SLPSDK = require("slp-sdk")
 const SLP = new SLPSDK()
-let Utils = SLP.slpjs.Utils
+const Utils = SLP.slpjs.Utils
 
 module.exports = {
   validateNetwork, // Prevents a common user error
@@ -77,7 +77,8 @@ function validateNetwork(addr) {
 // Dynamically set these based on env vars. Allows unit testing.
 function setEnvVars() {
   const BitboxHTTP = axios.create({
-    baseURL: process.env.RPC_BASEURL
+    baseURL: process.env.RPC_BASEURL,
+    timeout: 15000
   })
   const username = process.env.RPC_USERNAME
   const password = process.env.RPC_PASSWORD
@@ -127,6 +128,18 @@ function decodeError(err) {
 
     // Different kind of network error
     if (err.message && err.message.indexOf("ENETUNREACH") > -1) {
+      return {
+        msg:
+          "Network error: Could not communicate with full node or other external service.",
+        status: 503
+      }
+    }
+
+    // Axios timeout (aborted) error, or service is down (connection refused).
+    if (
+      err.code &&
+      (err.code === "ECONNABORTED" || err.code === "ECONNREFUSED")
+    ) {
       return {
         msg:
           "Network error: Could not communicate with full node or other external service.",
