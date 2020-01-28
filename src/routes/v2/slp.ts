@@ -30,8 +30,6 @@ const SLPSDK: any = require("slp-sdk")
 const SLP: any = new SLPSDK()
 const slp: any = SLP.slpjs
 const utils: any = slp.Utils
-const level: any = require("level")
-const slpTxDb: any = level("./slp-tx-db")
 
 // Used to convert error messages to strings, to safely pass to users.
 util.inspect.defaultOptions = { depth: 5 }
@@ -100,13 +98,6 @@ async function getRawTransactionsFromNode(txids: string[]): Promise<any> {
 
     const txPromises: Promise<any>[] = txids.map(
       async (txid: string): Promise<any> => {
-        // Check slpTxDb
-        try {
-          if (slpTxDb.isOpen()) {
-            const rawTx = await slpTxDb.get(txid)
-            return rawTx
-          }
-        } catch (err) {}
 
         requestConfig.data.id = "getrawtransaction"
         requestConfig.data.method = "getrawtransaction"
@@ -114,13 +105,6 @@ async function getRawTransactionsFromNode(txids: string[]): Promise<any> {
 
         const response: any = await BitboxHTTP(requestConfig)
         const result: AxiosResponse = response.data.result
-
-        // Insert to slpTxDb
-        try {
-          if (slpTxDb.isOpen()) await slpTxDb.put(txid, result)
-        } catch (err) {
-          // console.log("Error inserting to slpTxDb", err)
-        }
 
         return result
       }
@@ -133,30 +117,6 @@ async function getRawTransactionsFromNode(txids: string[]): Promise<any> {
     throw err
   }
 }
-
-// Create a validator for validating SLP transactions.
-function createValidator(network: string, getRawTransactions: any = null): any {
-  let tmpSLP: any
-
-  if (network === "mainnet")
-    tmpSLP = new SLPSDK({ restURL: process.env.REST_URL })
-  else tmpSLP = new SLPSDK({ restURL: process.env.TREST_URL })
-
-  const slpValidator: any = new slp.LocalValidator(
-    tmpSLP,
-    getRawTransactions
-      ? getRawTransactions
-      : tmpSLP.RawTransactions.getRawTransaction.bind(this)
-  )
-
-  return slpValidator
-}
-
-// Instantiate the local SLP validator.
-const slpValidator: any = createValidator(
-  process.env.NETWORK,
-  getRawTransactionsFromNode
-)
 
 function formatTokenOutput(token: any): TokenInterface {
   token.tokenDetails.id = token.tokenDetails.tokenIdHex
@@ -1528,10 +1488,10 @@ async function validateSingle(
 }
 
 // Returns a Boolean if the input TXID is a valid SLP TXID.
-async function isValidSlpTxid(txid: string): Promise<boolean> {
-  const isValid: Promise<boolean> = await slpValidator.isValidSlpTxid(txid)
-  return isValid
-}
+// async function isValidSlpTxid(txid: string): Promise<boolean> {
+//   const isValid: Promise<boolean> = await slpValidator.isValidSlpTxid(txid)
+//   return isValid
+// }
 
 async function burnTotalSingle(
   req: express.Request,
@@ -2511,7 +2471,6 @@ module.exports = {
     convertAddressSingle,
     convertAddressBulk,
     validateBulk,
-    isValidSlpTxid,
     createTokenType1,
     mintTokenType1,
     sendTokenType1,
