@@ -14,7 +14,7 @@ const bitbox = new BITBOX()
 
 const SLPSDK = require("slp-sdk")
 const SLP = new SLPSDK()
-let Utils = SLP.slpjs.Utils
+const Utils = SLP.slpjs.Utils
 
 module.exports = {
   validateNetwork, // Prevents a common user error
@@ -128,6 +128,18 @@ function decodeError(err) {
 
     // Different kind of network error
     if (err.message && err.message.indexOf("ENETUNREACH") > -1) {
+      return {
+        msg:
+          "Network error: Could not communicate with full node or other external service.",
+        status: 503
+      }
+    }
+
+    // Axios timeout (aborted) error, or service is down (connection refused).
+    if (
+      err.code &&
+      (err.code === "ECONNABORTED" || err.code === "ECONNREFUSED")
+    ) {
       return {
         msg:
           "Network error: Could not communicate with full node or other external service.",
