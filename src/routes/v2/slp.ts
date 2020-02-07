@@ -496,6 +496,7 @@ async function balancesForAddressSingle(
       q: {
         db: string[]
         aggregate: any[]
+        limit: number
       }
     } = {
       v: 3,
@@ -544,6 +545,7 @@ async function balancesForAddressSingle(
             }
           }
         ],
+        limit: 10000
       }
     }
 
@@ -697,6 +699,7 @@ async function balancesForAddressBulk(
             q: {
               db: string[]
               aggregate: any[]
+              limit: number
             }
           } = {
             v: 3,
@@ -745,6 +748,7 @@ async function balancesForAddressBulk(
                   }
                 }
               ],
+              limit: 10000
             }
           }
 
@@ -1047,7 +1051,7 @@ async function balancesForTokenBulk(
           // Get data from SLPDB.
           const tokenRes: AxiosResponse = await axios.get(url, options)
 
-          const resBalances = tokenRes.data.a.map((addy: any): any => {
+          const resBalances = tokenRes.data.g.map((addy: any): any => {
             addy.tokenBalance = parseFloat(addy.token_balance)
             addy.tokenBalanceString = addy.token_balance
             addy.slpAddress = addy._id
@@ -1130,6 +1134,7 @@ async function balancesForAddressByTokenIDSingle(
       q: {
         db: string[]
         aggregate: any[]
+        limit: number
       }
     } = {
       v: 3,
@@ -1178,6 +1183,7 @@ async function balancesForAddressByTokenIDSingle(
             }
           }
         ],
+        limit: 10000
       }
     }
 
@@ -1287,6 +1293,7 @@ async function balancesForAddressByTokenIDBulk(
           q: {
             db: string[]
             aggregate: any[]
+            limit: number
           }
         } = {
           v: 3,
@@ -1335,6 +1342,7 @@ async function balancesForAddressByTokenIDBulk(
                 }
               }
             ],
+            limit: 10000
           }
         }
 
