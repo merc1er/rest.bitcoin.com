@@ -2654,9 +2654,9 @@ function generateCredentials() {
 
   const options = {
     headers: {
-      authorization: readyCredential,
-      timeout: 30000
-    }
+      authorization: readyCredential
+    },
+    timeout: 30000
   }
 
   return options
