@@ -938,6 +938,14 @@ describe("#SLP", () => {
       if (process.env.TEST === "unit") {
         nock(`${process.env.SLPDB_URL}`)
           .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockMintTotal)
+
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockBurnTotal)
+
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
           .reply(200, {
             t: [
               {
