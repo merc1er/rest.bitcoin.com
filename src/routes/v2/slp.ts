@@ -21,6 +21,10 @@ import wlogger = require("../../util/winston-logging")
 
 import { BITBOX } from "bitbox-sdk"
 
+// Services
+import { Slpdb } from "./services/slpdb"
+import { ISlpData } from "./interfaces/ISlpData";
+
 const transactions = require("./transaction")
 
 // consts
@@ -30,6 +34,9 @@ const SLPSDK: any = require("slp-sdk")
 const SLP: any = new SLPSDK()
 const slp: any = SLP.slpjs
 const utils: any = slp.Utils
+
+// TODO: Use SLP Java Indexer when set and available
+const slpDataService: ISlpData = process.env.USE_SLPDB ? new Slpdb() : new Slpdb()
 
 // Used to convert error messages to strings, to safely pass to users.
 util.inspect.defaultOptions = { depth: 5 }
@@ -2308,51 +2315,10 @@ async function tokenStatsSingle(
   }
 
   try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 10
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse<any> = await axios.get(url, options)
-
-    const formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
+    const tokenStats = await slpDataService.getTokenStats(tokenId)
 
     res.status(200)
-    return res.json(formattedTokens[0])
+    return res.json(tokenStats)
   } catch (err) {
     wlogger.error(`Error in slp.ts/tokenStats().`, err)
 
@@ -2395,54 +2361,9 @@ async function tokenStatsBulk(
   const statsPromises: Promise<any>[] = tokenIds.map(
     async (tokenId: string) => {
       try {
-        const query: {
-          v: number
-          q: {
-            db: string[]
-            find: any
-            project: {
-              tokenDetails: number
-              tokenStats: number
-              nftParentId: number
-              _id: number
-            }
-            limit: number
-          }
-        } = {
-          v: 3,
-          q: {
-            db: ["t"],
-            find: {
-              $query: {
-                "tokenDetails.tokenIdHex": tokenId
-              }
-            },
-            project: { tokenDetails: 1, tokenStats: 1, nftParentId: 1, _id: 0 },
-            limit: 10
-          }
-        }
+        const tokenStats = await slpDataService.getTokenStats(tokenId)
 
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        const options = generateCredentials()
-
-        const tokenRes: AxiosResponse<any> = await axios.get(
-          url,
-          options
-        )
-
-        const formattedTokens: any[] = []
-
-        if (tokenRes.data.t.length) {
-          tokenRes.data.t.forEach((token: any) => {
-            token = formatTokenOutput(token)
-            formattedTokens.push(token.tokenDetails)
-          })
-        }
-
-        return formattedTokens[0]
+        return tokenStats
       } catch (err) {
         throw err
       }
