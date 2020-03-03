@@ -14,12 +14,11 @@ const router = express.Router()
 const axios = require("axios")
 const wlogger = require("../../util/winston-logging")
 
+// Local libraries.
 const Blockbook = require("./services/blockbook")
 const blockbook = new Blockbook()
-
 const Ninsight = require("./services/ninsight")
 const ninsight = new Ninsight()
-
 const RouteUtils = require("../../util/route-utils")
 const routeUtils = new RouteUtils()
 
@@ -30,7 +29,7 @@ class Address {
   constructor() {
     _this = this
 
-    // Bring global libraries into the instance of this Class.
+    // Encapsulate global libraries into the instance of this Class.
     // Makes it easier to mock for unit tests.
     _this.bitbox = bitbox
     _this.axios = axios
