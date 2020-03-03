@@ -790,11 +790,14 @@ describe("#SLP", () => {
 
         await convertAddressBulk(req, res)
 
-        assert.equal(true, false, "Unsupported address format")
+        assert.equal(true, false, "Unexpected result.")
       } catch (err) {
         // console.log(`err.message: ${util.inspect(err.message)}`)
 
-        assert.include(err.message, `Unsupported address format`)
+        assert.include(
+          err.message,
+          `Invalid BCH address. Double check your address`
+        )
       }
     })
 
