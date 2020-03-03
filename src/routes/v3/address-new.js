@@ -37,7 +37,7 @@ class Address {
     _this.ninsight = ninsight
     _this.routeUtils = routeUtils
 
-    // Select the indexer to use.
+    // Select the indexer to use. Default to Ninsight.
     _this.indexer = process.env.INDEXER ? process.env.INDEXER : "NINSIGHT"
 
     _this.router = router

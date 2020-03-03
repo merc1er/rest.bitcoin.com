@@ -11,6 +11,7 @@ const bitbox = new BITBOX()
 const BLOCKBOOK_URL = process.env.BLOCKBOOK_URL
   ? process.env.BLOCKBOOK_URL
   : "https://127.0.0.1:9131/"
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
 
 const axiosOptions = { timeout: 15000 }
 
@@ -20,7 +21,9 @@ class Blockbook {
   constructor() {
     _this = this
 
+    // Encapsulate dependencies for easier unit testing.
     _this.bitbox = bitbox
+    _this.axios = axios
   }
 
   // Query the Blockbook API for a balance on a single BCH address.
@@ -36,9 +39,9 @@ class Blockbook {
       // console.log(`path: ${path}`)
 
       // Query the Blockbook Node API.
-      const axiosResponse = await axios.get(path, axiosOptions)
+      const axiosResponse = await _this.axios.get(path, axiosOptions)
       const retData = axiosResponse.data
-      // console.log(`retData: ${util.inspect(retData)}`)
+      // console.log(`retData: ${JSON.stringify(retData, null, 2)}`)
 
       // Convert the data to meet the spec defined in /docs/v3/api-spec.md
       const specData = {
