@@ -17,6 +17,9 @@ const wlogger = require("../../util/winston-logging")
 const Blockbook = require("./services/blockbook")
 const blockbook = new Blockbook()
 
+const Ninsight = require("./services/ninsight")
+const ninsight = new Ninsight()
+
 const RouteUtils = require("../../util/route-utils")
 const routeUtils = new RouteUtils()
 
@@ -32,7 +35,11 @@ class Address {
     _this.bitbox = bitbox
     _this.axios = axios
     _this.blockbook = blockbook
+    _this.ninsight = ninsight
     _this.routeUtils = routeUtils
+
+    // Select the indexer to use.
+    _this.indexer = process.env.INDEXER ? process.env.INDEXER : "NINSIGHT"
 
     _this.router = router
     _this.router.get("/", this.root)
@@ -65,15 +72,16 @@ class Address {
         })
       }
 
-      const balances = addresses.map(async (address, index) =>
-        // console.log(`address: ${address}`)
-        // balanceFromBlockbook(address)
-        _this.blockbook.balance(address)
-      )
+      const balances = addresses.map(async (address, index) => {
+        // Get the data from the selected indexer.
+        if (_this.indexer === "BLOCKBOOK")
+          return _this.blockbook.balance(address)
+        return _this.ninsight.balance(address)
+      })
 
+      // Wait for all promises to resolve.
       const result = await Promise.all(balances)
-
-      // const val = await _this.blockbook.
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
       res.status(200)
       return res.json(result)
@@ -85,8 +93,8 @@ class Address {
         return res.json({ error: msg })
       }
 
-      //logger.error(`Error in detailsBulk(): `, err)
-      wlogger.error(`Error in address-new.js/balance().`, err)
+      // logger.error(`Error in detailsBulk(): `, err)
+      wlogger.error("Error in address-new.js/balance().", err)
 
       res.status(500)
       return res.json({ error: util.inspect(err) })

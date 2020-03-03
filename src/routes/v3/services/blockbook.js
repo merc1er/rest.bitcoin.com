@@ -5,7 +5,7 @@
 const axios = require("axios")
 const wlogger = require("../../../util/winston-logging")
 
-const BITBOX = require("bitbox-sdk").BITBOX
+const BITBOX = require("slp-sdk")
 const bitbox = new BITBOX()
 
 const BLOCKBOOK_URL = process.env.BLOCKBOOK_URL
@@ -40,7 +40,34 @@ class Blockbook {
       const retData = axiosResponse.data
       // console.log(`retData: ${util.inspect(retData)}`)
 
-      return retData
+      // Convert the data to meet the spec defined in /docs/v3/api-spec.md
+      const specData = {
+        balance: _this.bitbox.BitcoinCash.toBitcoinCash(
+          Number(retData.balance)
+        ),
+        balanceSat: Number(retData.balance),
+        totalReceived: _this.bitbox.BitcoinCash.toBitcoinCash(
+          Number(retData.totalReceived)
+        ),
+        totalReceivedSat: Number(retData.totalReceived),
+        totalSent: _this.bitbox.BitcoinCash.toBitcoinCash(
+          Number(retData.totalSent)
+        ),
+        totalSentSat: Number(retData.totalSent),
+        unconfirmedBalance: _this.bitbox.BitcoinCash.toBitcoinCash(
+          Number(retData.unconfirmedBalance)
+        ),
+        unconfirmedBalanceSat: Number(retData.unconfirmedBalance),
+        unconfirmedTxAppearances: retData.unconfirmedTxs,
+        txAppearances: retData.txs,
+        slpData: {},
+        transactions: retData.txids,
+        address: retData.address,
+        addressLegacy: _this.bitbox.Address.toLegacyAddress(retData.address),
+        addressSlp: _this.bitbox.Address.toSLPAddress(retData.address)
+      }
+
+      return specData
     } catch (err) {
       // Dev Note: Do not log error messages here. Throw them instead and let the
       // parent function handle it.
