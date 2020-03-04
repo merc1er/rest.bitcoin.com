@@ -1,39 +1,20 @@
 /*
-  Unit tests for the blockbook service library.
+  Integration tests for the Ninsight service library that interfaces with the
+  Ninsight Indexer REST API.
 */
 
 const assert = require("chai").assert
-const sinon = require("sinon")
 
-const Blockbook = require("../../../src/routes/v3/services/blockbook")
+const Ninsight = require("../../../src/routes/v3/services/ninsight")
 let uut // Unit Under Test
 
-const mockData = require("../mocks/blockbook-mock")
-
-describe("#Blockbook", () => {
-  let sandbox
-
+describe("#Ninsight", () => {
   beforeEach(() => {
-    uut = new Blockbook()
-
-    sandbox = sinon.createSandbox()
-  })
-
-  afterEach(() => sandbox.restore())
-
-  describe("#constructor", () => {
-    it("should encapsulate dependencies", () => {
-      assert.property(uut, "bitbox")
-    })
+    uut = new Ninsight()
   })
 
   describe("#balance", () => {
     it("should retrieve BCH balance and output should comply with spec", async () => {
-      // console.log(`mockData: ${JSON.stringify(mockData, null, 2)}`)
-
-      // Use mocks to prevent live network calls.
-      sandbox.stub(uut.axios, "get").resolves({ data: mockData.balance })
-
       const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
 
       const result = await uut.balance(addr)
@@ -69,21 +50,6 @@ describe("#Blockbook", () => {
       assert.isString(result.addressLegacy)
       assert.property(result, "addressSlp")
       assert.isString(result.addressSlp)
-    })
-
-    it("should handle thrown errors", async () => {
-      try {
-        // Force axios to throw an error
-        sandbox.stub(uut.axios, "get").rejects(new Error("ENETUNREACH"))
-
-        const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
-
-        await uut.balance(addr)
-
-        assert.equal(true, false, "unexpected result")
-      } catch (err) {
-        assert.include(err.message, "ENETUNREACH")
-      }
     })
   })
 })

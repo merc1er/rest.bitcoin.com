@@ -1,20 +1,20 @@
 /*
-  Unit tests for the blockbook service library.
+  Unit tests for the ninsight service library.
 */
 
 const assert = require("chai").assert
 const sinon = require("sinon")
 
-const Blockbook = require("../../../src/routes/v3/services/blockbook")
+const Ninsight = require("../../../src/routes/v3/services/ninsight")
 let uut // Unit Under Test
 
-const mockData = require("../mocks/blockbook-mock")
+const mockData = require("../mocks/ninsight-mock")
 
-describe("#Blockbook", () => {
+describe("#Ninsight", () => {
   let sandbox
 
   beforeEach(() => {
-    uut = new Blockbook()
+    uut = new Ninsight()
 
     sandbox = sinon.createSandbox()
   })

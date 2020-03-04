@@ -13,12 +13,6 @@ describe("#Blockbook", () => {
     uut = new Blockbook()
   })
 
-  describe("#constructor", () => {
-    it("should encapsulate dependencies", () => {
-      assert.property(uut, "bitbox")
-    })
-  })
-
   describe("#balance", () => {
     it("should retrieve BCH balance and output should comply with spec", async () => {
       const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
@@ -43,10 +37,10 @@ describe("#Blockbook", () => {
       assert.isNumber(result.unconfirmedBalance)
       assert.property(result, "unconfirmedBalanceSat")
       assert.isNumber(result.unconfirmedBalanceSat)
-      assert.property(result, "unconfirmedTxAppearances")
-      assert.isNumber(result.unconfirmedTxAppearances)
-      assert.property(result, "txAppearances")
-      assert.isNumber(result.txAppearances)
+      assert.property(result, "unconfirmedTxApperances")
+      assert.isNumber(result.unconfirmedTxApperances)
+      assert.property(result, "txApperances")
+      assert.isNumber(result.txApperances)
       assert.property(result, "slpData")
       assert.property(result, "transactions")
       assert.isArray(result.transactions)

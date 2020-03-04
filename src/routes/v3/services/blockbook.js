@@ -61,8 +61,8 @@ class Blockbook {
           Number(retData.unconfirmedBalance)
         ),
         unconfirmedBalanceSat: Number(retData.unconfirmedBalance),
-        unconfirmedTxAppearances: retData.unconfirmedTxs,
-        txAppearances: retData.txs,
+        unconfirmedTxApperances: retData.unconfirmedTxs,
+        txApperances: retData.txs,
         slpData: {},
         transactions: retData.txids,
         address: retData.address,

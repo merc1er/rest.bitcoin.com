@@ -20,7 +20,9 @@ class Ninsight {
   constructor() {
     _this = this
 
+    // Encapsulate dependencies
     _this.bitbox = bitbox
+    _this.axios = axios
   }
 
   // Query the Ninsight API for a balance on a single BCH address.
@@ -36,9 +38,9 @@ class Ninsight {
       // console.log(`path: ${path}`)
 
       // Query the Blockbook Node API.
-      const axiosResponse = await axios.get(path, axiosOptions)
+      const axiosResponse = await _this.axios.get(path, axiosOptions)
       const retData = axiosResponse.data
-      // console.log(`retData: ${util.inspect(retData)}`)
+      // console.log(`retData: ${JSON.stringify(retData, null, 2)}`)
 
       // Convert the data to meet the spec defined in /docs/v3/api-spec.md
       const specData = {
@@ -50,8 +52,8 @@ class Ninsight {
         totalSentSat: retData.totalSentSat,
         unconfirmedBalance: retData.unconfirmedBalance,
         unconfirmedBalanceSat: retData.unconfirmedBalanceSat,
-        unconfirmedTxAppearances: retData.unconfirmedTxAppearances,
-        txAppearances: retData.txAppearances,
+        unconfirmedTxApperances: retData.unconfirmedTxApperances,
+        txApperances: retData.txApperances,
         slpData: {},
         transactions: retData.transactions,
         address: retData.addrStr,
