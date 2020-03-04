@@ -283,9 +283,25 @@ async function listSingleToken(
     const tokenRes: AxiosResponse = await axios.get(url, options)
 
     let token
-    res.status(200)
     if (tokenRes.data.t.length) {
       token = formatTokenOutput(tokenRes.data.t[0])
+
+      let totalMinted = null
+      let totalBurned = null
+      try {
+        [totalMinted, totalBurned] = await Promise.all([
+          slpDataService.getTotalMinted(tokenId),
+          slpDataService.getTotalBurned(tokenId),
+        ])
+
+        token.tokenDetails.totalMinted = token.tokenDetails.initialTokenQty + totalMinted
+        token.tokenDetails.totalBurned = totalBurned
+        token.tokenDetails.circulatingSupply = token.tokenDetails.totalMinted - token.tokenDetails.totalBurned
+      } catch (err) {
+        // Swallow err
+      }
+
+      res.status(200)
       return res.json(token.tokenDetails)
     }
     return res.json({
@@ -396,71 +412,6 @@ async function listBulkToken(
     }
     res.status(500)
     return res.json({ error: `Error in /list/:tokenId: ${err.message}` })
-  }
-}
-
-async function lookupToken(tokenId: string): Promise<any> {
-  try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 1000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-    // console.log(`tokenRes.data: ${JSON.stringify(tokenRes.data,null,2)}`)
-
-    const formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
-
-    let t: any
-    formattedTokens.forEach((token: any) => {
-      if (token.id === tokenId) t = token
-    })
-
-    // If token could not be found.
-    if (t === undefined) {
-      t = {
-        id: "not found"
-      }
-    }
-
-    return t
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/lookupToken().`, err)
-    throw err
   }
 }
 
@@ -2610,7 +2561,6 @@ module.exports = {
     txsTokenIdAddressSingle,
     txsTokenIdAddressBulk,
     burnTotalSingle,
-    burnTotalBulk,
-    lookupToken
+    burnTotalBulk
   }
 }
