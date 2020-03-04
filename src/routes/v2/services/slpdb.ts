@@ -7,7 +7,7 @@ import {
 import axios, { AxiosResponse } from "axios"
 
 export class Slpdb implements ISlpData {
-  async getTokenStats(tokenId: string): Promise<TokenInterface> {
+  public async getTokenStats(tokenId: string): Promise<TokenInterface> {
     const [totalMinted, totalBurned, tokenDetails] = await Promise.all([
       this.getTotalMinted(tokenId),
       this.getTotalBurned(tokenId),
@@ -51,7 +51,7 @@ export class Slpdb implements ISlpData {
     return response
   }
 
-  private async getTotalMinted(tokenId: string): Promise<number> {
+  public async getTotalMinted(tokenId: string): Promise<number> {
     const query: any = {
       "v": 3,
       "q": {
@@ -94,7 +94,7 @@ export class Slpdb implements ISlpData {
     return parseFloat(result.data.g[0].count)
   }
 
-  private async getTotalBurned(tokenId: string): Promise<number> {
+  public async getTotalBurned(tokenId: string): Promise<number> {
     const query: any = {
       "v": 3,
       "q": {
