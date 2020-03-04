@@ -8,7 +8,7 @@ const wlogger = require("./winston-logging")
 const util = require("util")
 util.inspect.defaultOptions = { depth: 1 }
 
-import { BITBOX } from "bitbox-sdk"
+const BITBOX = require("slp-sdk")
 const bitbox = new BITBOX()
 
 // let _this
@@ -112,25 +112,12 @@ class RouteUtils {
       // console.log(`err: `, err)
 
       // Attempt to detect a network connection error.
-      if (err.message && err.message.indexOf("ENOTFOUND") > -1) {
-        return {
-          msg:
-            "Network error: Could not communicate with full node or other external service.",
-          status: 503
-        }
-      }
-
-      // Different kind of network error
-      if (err.message && err.message.indexOf("ENETUNREACH") > -1) {
-        return {
-          msg:
-            "Network error: Could not communicate with full node or other external service.",
-          status: 503
-        }
-      }
-
-      // Different kind of network error
-      if (err.message && err.message.indexOf("EAI_AGAIN") > -1) {
+      if (
+        err.message &&
+        (err.message.indexOf("ENOTFOUND") > -1 ||
+          err.message.indexOf("ENETUNREACH") > -1 ||
+          err.message.indexOf("EAI_AGAIN") > -1)
+      ) {
         return {
           msg:
             "Network error: Could not communicate with full node or other external service.",
@@ -150,6 +137,7 @@ class RouteUtils {
         }
       }
 
+      // Default return value if error can't be decoded.
       return { msg: false, status: 500 }
     } catch (err) {
       wlogger.error("unhandled error in route-utils.js/decodeError(): ", err)

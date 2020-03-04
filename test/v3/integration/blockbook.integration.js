@@ -18,7 +18,7 @@ describe("#Blockbook", () => {
       const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
 
       const result = await uut.balance(addr)
-      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+      console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
       // Ensure the returned value meets the specificiations in /docs/v3/api-spec.md
       assert.property(result, "balance")

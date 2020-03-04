@@ -5,7 +5,7 @@
 
 const util = require("util")
 
-const BITBOX = require("bitbox-sdk").BITBOX
+const BITBOX = require("slp-sdk")
 const bitbox = new BITBOX()
 
 const express = require("express")
@@ -71,6 +71,31 @@ class Address {
         })
       }
 
+      // Validate each element in the address array.
+      for (let i = 0; i < addresses.length; i++) {
+        const thisAddress = addresses[i]
+        // Ensure the input is a valid BCH address.
+        try {
+          _this.bitbox.Address.toLegacyAddress(thisAddress)
+        } catch (err) {
+          res.status(400)
+          return res.json({
+            error: `Invalid BCH address. Double check your address is valid: ${thisAddress}`
+          })
+        }
+
+        // Prevent a common user error. Ensure they are using the correct network address.
+        const networkIsValid = _this.routeUtils.validateNetwork(
+          _this.bitbox.Address.toCashAddress(thisAddress)
+        )
+        if (!networkIsValid) {
+          res.status(400)
+          return res.json({
+            error: `Invalid network for address ${thisAddress}. Trying to use a testnet address on mainnet, or vice versa.`
+          })
+        }
+      }
+
       const balances = addresses.map(async (address, index) => {
         // Get the data from the selected indexer.
         if (_this.indexer === "BLOCKBOOK")
@@ -85,6 +110,9 @@ class Address {
       res.status(200)
       return res.json(result)
     } catch (err) {
+      // console.log(`err: `, err)
+      // console.log(`err: ${JSON.stringify(err, null, 2)}`)
+
       // Attempt to decode the error message.
       const { msg, status } = _this.routeUtils.decodeError(err)
       if (msg) {
@@ -92,9 +120,9 @@ class Address {
         return res.json({ error: msg })
       }
 
-      // logger.error(`Error in detailsBulk(): `, err)
       wlogger.error("Error in address-new.js/balance().", err)
 
+      // If error could not be decoded.
       res.status(500)
       return res.json({ error: util.inspect(err) })
     }
