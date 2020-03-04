@@ -53,9 +53,6 @@ const mockSingleToken = {
         qty_valid_txns_since_genesis: 2,
         qty_valid_token_utxos: 0,
         qty_valid_token_addresses: 0,
-        qty_token_minted: "9999",
-        qty_token_burned: "9999",
-        qty_token_circulating_supply: "0",
         qty_satoshis_locked_up: 0,
         minting_baton_status: "NEVER_CREATED"
       }
@@ -259,10 +256,15 @@ const mockTokenStats = {
   qty_valid_txns_since_genesis: 241,
   qty_valid_token_utxos: 151,
   qty_valid_token_addresses: 113,
-  qty_token_circulating_supply: "20995990",
-  qty_token_burned: "4010",
-  qty_token_minted: "21000000",
   qty_satoshis_locked_up: 81900
+}
+
+const mockBurnTotal = {
+  g: [{ count: "7119.812001" }]
+}
+
+const mockMintTotal = {
+  g: [{ count: "21000000" }]
 }
 
 const mockBalance = {
@@ -368,6 +370,8 @@ module.exports = {
   mockConvert,
   mockTokenDetails,
   mockTokenStats,
+  mockBurnTotal,
+  mockMintTotal,
   mockTx,
   mockBalance,
   mockTransactions,
