@@ -6,7 +6,72 @@ import {
 
 import axios, { AxiosResponse } from "axios"
 
+const SLPSDK: any = require("slp-sdk")
+const SLP: any = new SLPSDK()
+
 export class Slpdb implements ISlpData {
+  public async getHistoricalSlpTransactions(addressList: string [], fromBlock: number = 0) {
+
+    // Build SLPDB or query from addressList
+    const orQueryArray = []
+    for (let address of addressList) {
+      const cashAddress = SLP.Address.toCashAddress(address)
+      const slpAddress = SLP.Address.toSLPAddress(address)
+
+      const cashQuery = {
+        'in.e.a': cashAddress.slice(12),
+      }
+      const slpQuery = {
+        'slp.detail.outputs.address': slpAddress,
+      }
+
+      orQueryArray.push(cashQuery)
+      orQueryArray.push(slpQuery)
+    }
+
+    const query = {
+      v: 3,
+      q: {
+        find: {
+          db: ['c', 'u'],
+          $query: {
+            $or: orQueryArray,
+            'slp.valid': true,
+            'blk.i': {
+              $not: {
+                $lte: fromBlock,
+              },
+            },
+          },
+          $orderby: {
+            'blk.i': -1,
+          },
+        },
+        project: {
+          '_id': 0,
+          'tx.h': 1,
+          'in.i': 1,
+          'in.e': 1,
+          'slp.detail': 1,
+          'blk': 1,
+        },
+        limit: 500,
+      },
+    }
+
+    const result = await this.runQuery(query)
+
+    let transactions = []
+    if (result.data && result.data.c) {
+      transactions = transactions.concat(result.data.c)
+    }
+    if (result.data && result.data.u) {
+      transactions = transactions.concat(result.data.u)
+    }
+
+    return transactions
+  }
+
   public async getTokenStats(tokenId: string): Promise<TokenInterface> {
     const [totalMinted, totalBurned, tokenDetails] = await Promise.all([
       this.getTotalMinted(tokenId),
@@ -40,7 +105,7 @@ export class Slpdb implements ISlpData {
     return options
   }
 
-  private async runQuery(query: string): Promise<any> {
+  private async runQuery(query: string | object): Promise<any> {
     const queryString: string = JSON.stringify(query)
     const queryBase64: string = Buffer.from(queryString).toString("base64")
     const url: string = `${process.env.SLPDB_URL}q/${queryBase64}`
