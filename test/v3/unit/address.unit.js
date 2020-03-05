@@ -27,8 +27,6 @@ describe("#AddressRouter", () => {
   let req, res
 
   before(() => {
-    uut = new AddressRoute()
-
     sandbox = sinon.createSandbox()
   })
 
@@ -44,6 +42,8 @@ describe("#AddressRouter", () => {
     req.params = {}
     req.body = {}
     req.query = {}
+
+    uut = new AddressRoute()
 
     sandbox = sinon.createSandbox()
   })
@@ -192,6 +192,56 @@ describe("#AddressRouter", () => {
 
       assert.isArray(result)
       assert.equal(result.length, 2, "2 outputs for 2 inputs")
+    })
+
+    it("should query Blockbook if flag is set", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.blockbook, "balance").resolves(mockData.mockBalance)
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Set the Blockbook indexer flag
+      uut.indexer = "BLOCKBOOK"
+
+      // Call the details API.
+      const result = await uut.balance(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      // Assert that required fields exist in the returned object.
+      assert.equal(result.length, 1, "Array with one entry")
+    })
+
+    it("should catch and report unhandled errors", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "balance").rejects(new Error("test error"))
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Call the details API.
+      const result = await uut.balance(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.property(result, "error")
+    })
+
+    it("should catch and report handled errors", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "balance").rejects(new Error("ENOTFOUND"))
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Call the details API.
+      const result = await uut.balance(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.property(result, "error")
+      assert.include(result.error, "Network error")
     })
   })
 })

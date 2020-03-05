@@ -1,14 +1,12 @@
-"use strict";
 /*
   A private library of utility functions used by several different routes.
 */
-Object.defineProperty(exports, "__esModule", { value: true });
 var axios = require("axios");
 var wlogger = require("./winston-logging");
 var util = require("util");
 util.inspect.defaultOptions = { depth: 1 };
-var bitbox_sdk_1 = require("bitbox-sdk");
-var bitbox = new bitbox_sdk_1.BITBOX();
+var BITBOX = require("slp-sdk");
+var bitbox = new BITBOX();
 // let _this
 var RouteUtils = /** @class */ (function () {
     function RouteUtils() {
@@ -97,21 +95,10 @@ var RouteUtils = /** @class */ (function () {
             // console.log(`err.message: ${err.message}`)
             // console.log(`err: `, err)
             // Attempt to detect a network connection error.
-            if (err.message && err.message.indexOf("ENOTFOUND") > -1) {
-                return {
-                    msg: "Network error: Could not communicate with full node or other external service.",
-                    status: 503
-                };
-            }
-            // Different kind of network error
-            if (err.message && err.message.indexOf("ENETUNREACH") > -1) {
-                return {
-                    msg: "Network error: Could not communicate with full node or other external service.",
-                    status: 503
-                };
-            }
-            // Different kind of network error
-            if (err.message && err.message.indexOf("EAI_AGAIN") > -1) {
+            if (err.message &&
+                (err.message.indexOf("ENOTFOUND") > -1 ||
+                    err.message.indexOf("ENETUNREACH") > -1 ||
+                    err.message.indexOf("EAI_AGAIN") > -1)) {
                 return {
                     msg: "Network error: Could not communicate with full node or other external service.",
                     status: 503
@@ -125,6 +112,7 @@ var RouteUtils = /** @class */ (function () {
                     status: 503
                 };
             }
+            // Default return value if error can't be decoded.
             return { msg: false, status: 500 };
         }
         catch (err) {
