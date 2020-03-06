@@ -1930,8 +1930,8 @@
     "/slp/transactionHistoryAllTokens/{address}": {
       "get": {
         "tags": ["slp"],
-        "summary": "SLP transactions by address",
-        "description": "Transactions by address.",
+        "summary": "SLP transactions by address (alpha endpoint)",
+        "description": "Transactions by address (alpha endpoint).",
         "operationId": "txsByAddressSingle",
         "parameters": [
           {
@@ -1955,8 +1955,8 @@
     "/slp/transactionHistoryAllTokens": {
       "post": {
         "tags": ["slp"],
-        "summary": "Bulk SLP transactions by address",
-        "description": "Bulk Transactions by address.",
+        "summary": "Bulk SLP transactions by address (alpha endpoint)",
+        "description": "Bulk Transactions by address (alpha endpoint).",
         "operationId": "txsByAddressBulk",
         "requestBody": {
           "description": "",
