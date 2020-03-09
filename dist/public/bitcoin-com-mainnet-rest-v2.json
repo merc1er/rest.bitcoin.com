@@ -3295,6 +3295,59 @@
 				}
 			}
 		},
+		"/slp/transactionHistoryAllTokens/{address}": {
+			"get": {
+				"tags": [
+					"slp"
+				],
+				"summary": "SLP transactions by address (alpha endpoint)",
+				"description": "Transactions by address (alpha endpoint).",
+				"operationId": "txsByAddressSingle",
+				"parameters": [
+					{
+						"name": "address",
+						"in": "path",
+						"description": "The slp address",
+						"required": true,
+						"example": "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "successful response"
+					}
+				}
+			}
+		},
+		"/slp/transactionHistoryAllTokens": {
+			"post": {
+				"tags": [
+					"slp"
+				],
+				"summary": "Bulk SLP transactions by address (alpha endpoint)",
+				"description": "Bulk Transactions by address (alpha endpoint).",
+				"operationId": "txsByAddressBulk",
+				"requestBody": {
+					"description": "",
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SLPConvert"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "successful response"
+					}
+				}
+			}
+		},
 		"/slp/burnTotal/{transactionId}": {
 			"get": {
 				"tags": [
@@ -3465,7 +3518,7 @@
 			"url": "/v2"
 		},
 		{
-			"url": "/v3"
+			"url": "/v3-alpha"
 		}
 	],
 	"tags": [
