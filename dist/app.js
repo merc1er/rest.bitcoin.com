@@ -81,7 +81,7 @@ app.use(function (req, res, next) {
     next();
 });
 var v2prefix = "v2";
-var v3prefix = "v3";
+var v3prefix = "v3-alpha";
 // Instantiate the authorization middleware, used to implement pro-tier rate limiting.
 var auth = new AuthMW();
 app.use("/" + v2prefix + "/", auth.mw());

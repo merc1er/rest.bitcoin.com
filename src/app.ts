@@ -124,7 +124,7 @@ app.use(
 )
 
 const v2prefix = "v2"
-const v3prefix = "v3"
+const v3prefix = "v3-alpha"
 
 // Instantiate the authorization middleware, used to implement pro-tier rate limiting.
 const auth = new AuthMW()
