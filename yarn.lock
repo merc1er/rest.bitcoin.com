@@ -279,11 +279,6 @@
     "@types/connect" "*"
     "@types/node" "*"
 
-"@types/chai@^4.1.7":
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/@types/chai/-/chai-4.2.0.tgz#2478260021408dec32c123a7cad3414beb811a07"
-  integrity sha512-zw8UvoBEImn392tLjxoavuonblX/4Yb9ha4KBU10FirCfwgzhKO0dvyJSF9ByxV1xK1r2AgnAi/tvQaLgxQqxA==
-
 "@types/connect@*":
   version "3.4.32"
   resolved "https://registry.yarnpkg.com/@types/connect/-/connect-3.4.32.tgz#aa0e9616b9435ccad02bc52b5b454ffc2c70ba28"
@@ -337,11 +332,6 @@
   resolved "https://registry.yarnpkg.com/@types/minimatch/-/minimatch-3.0.3.tgz#3dca0e3f33b200fc7d1139c0cd96c1268cadfd9d"
   integrity sha512-tHq6qdbT9U1IRSGf14CL0pUlULksvY9OZ+5eEgl1N7t+OA3tGvNpxJCzuKQlsNgCVwbAs670L1vcVQi8j9HjnA==
 
-"@types/mocha@^5.2.6":
-  version "5.2.7"
-  resolved "https://registry.yarnpkg.com/@types/mocha/-/mocha-5.2.7.tgz#315d570ccb56c53452ff8638738df60726d5b6ea"
-  integrity sha512-NYrtPht0wGzhwe9+/idPaBB+TqkY9AhTvOLMkThm0IoEfLaiVQZwBwyJ5puCkO3AUCWrmcoePjp2mbFocKy4SQ==
-
 "@types/node@*":
   version "12.0.8"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.0.8.tgz#551466be11b2adc3f3d47156758f610bd9f6b1d8"
@@ -382,10 +372,17 @@
     "@types/express-serve-static-core" "*"
     "@types/mime" "*"
 
-"@types/sinon@^7.0.11":
-  version "7.0.13"
-  resolved "https://registry.yarnpkg.com/@types/sinon/-/sinon-7.0.13.tgz#ca039c23a9e27ebea53e0901ef928ea2a1a6d313"
-  integrity sha512-d7c/C/+H/knZ3L8/cxhicHUiTDxdgap0b/aNJfsmLwFu/iOP17mdgbQsbHA3SJmrzsjD0l3UEE5SN4xxuz5ung==
+"@types/socket.io-client@^1.4.32":
+  version "1.4.32"
+  resolved "https://registry.yarnpkg.com/@types/socket.io-client/-/socket.io-client-1.4.32.tgz#988a65a0386c274b1c22a55377fab6a30789ac14"
+  integrity sha512-Vs55Kq8F+OWvy1RLA31rT+cAyemzgm0EWNeax6BWF8H7QiiOYMJIdcwSDdm5LVgfEkoepsWkS+40+WNb7BUMbg==
+
+"@types/socket.io@^2.1.2":
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/@types/socket.io/-/socket.io-2.1.4.tgz#674e7bc193c5ccdadd4433f79f3660d31759e9ac"
+  integrity sha512-cI98INy7tYnweTsUlp8ocveVdAxENUThO0JsLSCs51cjOP2yV5Mqo5QszMDPckyRRA+PO6+wBgKvGvHUCc23TQ==
+  dependencies:
+    "@types/node" "*"
 
 "@types/wif@^2.0.1":
   version "2.0.1"
@@ -937,14 +934,6 @@ aws4@^1.8.0:
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.8.0.tgz#f0e003d9ca9e7f59c7a508945d7b2ef9a04a542f"
   integrity sha512-ReZxvNHIOv88FlT7rxcXIIC0fPt4KZqZbOlivyWtXLt8ESx84zd3kMC6iK5jVeS2qt+g7ftS7ye4fi06X5rtRQ==
 
-axios@0.18.0:
-  version "0.18.0"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.0.tgz#32d53e4851efdc0a11993b6cd000789d70c05102"
-  integrity sha1-MtU+SFHv3AoRmTts0AB4nXDAUQI=
-  dependencies:
-    follow-redirects "^1.3.0"
-    is-buffer "^1.1.5"
-
 axios@0.19.0, axios@^0.19.0:
   version "0.19.0"
   resolved "https://registry.yarnpkg.com/axios/-/axios-0.19.0.tgz#8e09bff3d9122e133f7b8101c8fbdd00ed3d2ab8"
@@ -961,7 +950,7 @@ axios@^0.17.1:
     follow-redirects "^1.2.5"
     is-buffer "^1.1.5"
 
-axios@^0.18.0:
+axios@^0.18.0, axios@^0.18.1:
   version "0.18.1"
   resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.1.tgz#ff3f0de2e7b5d180e757ad98000f1081b87bcea3"
   integrity sha512-0BfJq4NSfQXd+SkFdrvFbG7addhYSBA2mQwISr46pD6E5iqkWg02RAs8vyTT/j0RTnoYmeXauBuSv1qKwR179g==
@@ -1585,6 +1574,11 @@ base64id@1.0.0:
   resolved "https://registry.yarnpkg.com/base64id/-/base64id-1.0.0.tgz#47688cb99bb6804f0e06d3e763b1c32e57d8e6b6"
   integrity sha1-R2iMuZu2gE8OBtPnY7HDLlfY5rY=
 
+base64id@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/base64id/-/base64id-2.0.0.tgz#2770ac6bc47d312af97a8bf9a634342e0cd25cb6"
+  integrity sha512-lGe34o6EHj9y3Kts9R4ZYs/Gr+6N7MCaMlIFA3F1R2O5/m7K06AxfSeO5530PEERE6/WyEg3lsuyw4GHlPZHog==
+
 base@^0.11.1:
   version "0.11.2"
   resolved "https://registry.yarnpkg.com/base/-/base-0.11.2.tgz#7bde5ced145b6d551a90db87f83c558b4eb48a8f"
@@ -1663,13 +1657,13 @@ bch-wallet-bridge-provider-interface@^0.1.1:
     bchaddrjs "^0.2.2"
     bitcoincashjs "^0.1.10"
 
-"bchaddrjs-slp@git://github.com/simpleledger/bchaddrjs.git#master":
-  version "0.2.6"
-  uid ea05d679783a6737f2f99adc37ebf485dc64f006
-  resolved "git://github.com/simpleledger/bchaddrjs.git#ea05d679783a6737f2f99adc37ebf485dc64f006"
+bchaddrjs-slp@0.2.8:
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/bchaddrjs-slp/-/bchaddrjs-slp-0.2.8.tgz#ddad236daa0f5a10480f57d7ad082b54576ef153"
+  integrity sha512-Is4NQG0xhrmW8ml40n8IjQzYlg1gMqst2RkF20SWjuhiSA8VDx1F53krthFqZFp5hpB+Ig/NPx6NX4VEH9W32Q==
   dependencies:
     bs58check "^2.1.2"
-    cashaddrjs-slp "^0.2.11"
+    cashaddrjs-slp "^0.2.12"
 
 "bchaddrjs-slp@https://github.com/simpleledger/bchaddrjs.git":
   version "0.2.6"
@@ -1743,7 +1737,7 @@ bdns@^0.1.4:
   dependencies:
     bsert "~0.0.10"
 
-bech32@^1.1.2, bech32@^1.1.3:
+bech32@=1.1.3, bech32@^1.1.2, bech32@^1.1.3:
   version "1.1.3"
   resolved "https://registry.yarnpkg.com/bech32/-/bech32-1.1.3.tgz#bd47a8986bbb3eec34a56a097a84b8d3e9a2dfcd"
   integrity sha512-yuVFUvrNcoJi0sv5phmqc6P+Fl1HjRDRNOOkHY2X/3LBy2bIGNSFx4fZ95HMaXHupuS7cZR15AsvtmCIF4UEyg==
@@ -1919,23 +1913,14 @@ bip66@^1.1.0, bip66@^1.1.5:
   dependencies:
     safe-buffer "^5.0.1"
 
-bitbox-sdk@8.1.0:
-  version "8.1.0"
-  resolved "https://registry.yarnpkg.com/bitbox-sdk/-/bitbox-sdk-8.1.0.tgz#f1b8e0d6c53ca60b2c34902bfe9ce12ef9c29599"
-  integrity sha512-kCRsTH0JxXPhtK/at3JGWf6nqv0pawFo1B2ii5EIpy2ux0O2lQzpVZLR28ACWx1neQrIn83q1wZaSr7BFHUs0Q==
+bitbox-sdk@8.10.1:
+  version "8.10.1"
+  resolved "https://registry.yarnpkg.com/bitbox-sdk/-/bitbox-sdk-8.10.1.tgz#201769cbe8fbe1145181988d0401c36d7e7c8036"
+  integrity sha512-7h6JrvwGburPXIAykFpYGgVHD3hCBCEAME2C5mH9uKuCp4AbmqWYBYZhB4PPb6IAwxxXR9dtK7X3rP6PGFFEWA==
   dependencies:
-    "@types/bigi" "^1.4.2"
-    "@types/bip39" "^2.4.2"
-    "@types/chai" "^4.1.7"
-    "@types/mocha" "^5.2.6"
-    "@types/node" "^10.11.7"
-    "@types/randombytes" "^2.0.0"
-    "@types/sinon" "^7.0.11"
-    "@types/wif" "^2.0.1"
     assert "^1.4.1"
-    axios "0.18.0"
+    axios "0.19.0"
     bc-bip68 "^1.0.5"
-    bch-wallet-bridge.js "github:web3bch/bch-wallet-bridge.js#master"
     bigi "^1.4.2"
     bip-schnorr "^0.3.0"
     bip21 Bitcoin-com/bip21
@@ -1944,20 +1929,17 @@ bitbox-sdk@8.1.0:
     bip39 "^2.5.0"
     bip66 "^1.1.5"
     bitcoincash-ops Bitcoin-com/bitcoincash-ops#2.0.0
-    bitcoincashjs-lib Bitcoin-com/bitcoincashjs-lib#v4.0.0
+    bitcoincashjs-lib Bitcoin-com/bitcoincashjs-lib#v4.0.1
     bitcoinjs-message "^2.0.0"
-    browserify "^16.2.2"
     bs58 "^4.0.1"
-    buffer "^5.1.0"
     cashaddrjs "^0.2.9"
     coininfo Bitcoin-com/coininfo
-    qrcode "^1.2.0"
+    eventsource "^1.0.7"
     randombytes "^2.0.6"
-    repl.history "^0.1.4"
     safe-buffer "^5.1.2"
     satoshi-bitcoin "^1.0.4"
-    socket.io "^2.1.1"
-    socket.io-client "^2.1.1"
+    socket.io "^2.2.0"
+    socket.io-client "^2.2.0"
     wif "^2.0.6"
 
 bitbox-sdk@8.4.2:
@@ -2100,26 +2082,6 @@ bitcoincashjs-lib@Bitcoin-com/bitcoincashjs-lib#3.3.4:
     varuint-bitcoin "^1.0.4"
     wif "^2.0.1"
 
-bitcoincashjs-lib@Bitcoin-com/bitcoincashjs-lib#v4.0.0:
-  version "4.0.0"
-  resolved "https://codeload.github.com/Bitcoin-com/bitcoincashjs-lib/tar.gz/3d360c780ec7df4a74aea93664c2b5ff8b08949a"
-  dependencies:
-    bech32 "^1.1.2"
-    bigi "^1.4.0"
-    bip66 "^1.1.0"
-    bitcoincash-ops Bitcoin-com/bitcoincash-ops#2.0.0
-    bs58check "^2.0.0"
-    create-hash "^1.1.0"
-    create-hmac "^1.1.3"
-    ecurve "^1.0.0"
-    merkle-lib "^2.0.10"
-    pushdata-bitcoin Bitcoin-com/pushdata-bitcoin#1.2.1
-    randombytes "^2.0.1"
-    safe-buffer "^5.0.1"
-    typeforce "^1.11.3"
-    varuint-bitcoin "^1.0.4"
-    wif "^2.0.1"
-
 bitcoincashjs-lib@Bitcoin-com/bitcoincashjs-lib#v4.0.1:
   version "4.0.1"
   resolved "https://codeload.github.com/Bitcoin-com/bitcoincashjs-lib/tar.gz/28447b40a4ccd23913f7ade6589dc7214c99e60a"
@@ -2198,17 +2160,18 @@ bitcoinjs-message@^2.0.0:
     secp256k1 "^3.0.1"
     varuint-bitcoin "^1.0.1"
 
-bitcore-lib-cash@^0.19.0:
-  version "0.19.0"
-  resolved "https://registry.yarnpkg.com/bitcore-lib-cash/-/bitcore-lib-cash-0.19.0.tgz#357ebc25ae618d3b48be2821e17c74151d539f7b"
-  integrity sha512-JBD30YS5M2OSUPbXggM257FjWXb5A1pHFn88lZQsqOokgddmdwp45K4APVEsj2iaKLR7uLOnGppSbAWj5Hihwg==
+bitcore-lib-cash@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/bitcore-lib-cash/-/bitcore-lib-cash-9.0.0.tgz#bfb96462ef1307504c11e0fbb0eac3890ff93fb3"
+  integrity sha512-u53DJLnjUm/M7NehrzJZAOoLP7mne9Jd1KUFt4xSkQ9vA/NpXgpj5/j7LeR0VzYENNzPkD/fBfXTN+1gbgsRjw==
   dependencies:
+    bitcore-lib "^9.0.0"
     bn.js "=4.11.8"
-    bs58 "=4.0.1"
+    bs58 "^4.0.1"
     buffer-compare "=1.1.1"
     elliptic "=6.4.0"
     inherits "=2.0.1"
-    lodash "=4.17.11"
+    lodash "=4.17.15"
 
 "bitcore-lib-cash@https://github.com/paOol/bitcore-lib-cash.git":
   version "0.20.0"
@@ -2220,6 +2183,19 @@ bitcore-lib-cash@^0.19.0:
     elliptic "=6.4.0"
     inherits "=2.0.1"
     lodash "=4.17.11"
+
+bitcore-lib@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/bitcore-lib/-/bitcore-lib-9.0.0.tgz#bc3d5e9f4d635fdf94bffe4d217aa51c7b299d43"
+  integrity sha512-WXg8MXv57xg/WB7WZ/6wj4W1VbRVL83d5taWOKLbxXc6VspwSss6w5DyDJ5YDe1fDyWADjz4fsSU4nCj6jWTgA==
+  dependencies:
+    bech32 "=1.1.3"
+    bn.js "=4.11.8"
+    bs58 "^4.0.1"
+    buffer-compare "=1.1.1"
+    elliptic "=6.4.0"
+    inherits "=2.0.1"
+    lodash "=4.17.15"
 
 bl@^1.0.0, bl@^1.2.1:
   version "1.2.2"
@@ -2918,6 +2894,13 @@ cashaddrjs-slp@^0.2.11:
   version "0.2.11"
   resolved "https://registry.yarnpkg.com/cashaddrjs-slp/-/cashaddrjs-slp-0.2.11.tgz#ca3c23c2a1dd6b65da3976819dca7d50894bd489"
   integrity sha512-c6od4HHecD+1aEl0WmTEw+ncWBKZNqRW9Q8F+jwB1m1VozbNAmcwy0P8ihVD+cZEpwiviFyOva2simH2txINwg==
+  dependencies:
+    big-integer "^1.6.34"
+
+cashaddrjs-slp@^0.2.12:
+  version "0.2.12"
+  resolved "https://registry.yarnpkg.com/cashaddrjs-slp/-/cashaddrjs-slp-0.2.12.tgz#30eda56cfc3ad4a949911258a0356459f45879d4"
+  integrity sha512-n2TTIuW6vZZxYvjvsUAA+wOM0Zkj+3RRKUtDC1XSu4Ic4XVr0yFJkl1bzQkHWda7nkVT51sxjZneygz7D0SyrQ==
   dependencies:
     big-integer "^1.6.34"
 
@@ -4314,10 +4297,38 @@ engine.io-client@~3.3.1:
     xmlhttprequest-ssl "~1.5.4"
     yeast "0.1.2"
 
+engine.io-client@~3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/engine.io-client/-/engine.io-client-3.4.0.tgz#82a642b42862a9b3f7a188f41776b2deab643700"
+  integrity sha512-a4J5QO2k99CM2a0b12IznnyQndoEvtA4UAldhGzKqnHf42I3Qs2W5SPnDvatZRcMaNZs4IevVicBPayxYt6FwA==
+  dependencies:
+    component-emitter "1.2.1"
+    component-inherit "0.0.3"
+    debug "~4.1.0"
+    engine.io-parser "~2.2.0"
+    has-cors "1.1.0"
+    indexof "0.0.1"
+    parseqs "0.0.5"
+    parseuri "0.0.5"
+    ws "~6.1.0"
+    xmlhttprequest-ssl "~1.5.4"
+    yeast "0.1.2"
+
 engine.io-parser@~2.1.0, engine.io-parser@~2.1.1:
   version "2.1.3"
   resolved "https://registry.yarnpkg.com/engine.io-parser/-/engine.io-parser-2.1.3.tgz#757ab970fbf2dfb32c7b74b033216d5739ef79a6"
   integrity sha512-6HXPre2O4Houl7c4g7Ic/XzPnHBvaEmN90vtRO9uLmwtRqQmTOw0QMevL1TOfL2Cpu1VzsaTmMotQgMdkzGkVA==
+  dependencies:
+    after "0.8.2"
+    arraybuffer.slice "~0.0.7"
+    base64-arraybuffer "0.1.5"
+    blob "0.0.5"
+    has-binary2 "~1.0.2"
+
+engine.io-parser@~2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/engine.io-parser/-/engine.io-parser-2.2.0.tgz#312c4894f57d52a02b420868da7b5c1c84af80ed"
+  integrity sha512-6I3qD9iUxotsC5HEMuuGsKA0cXerGz+4uGcXQEkfBidgKf0amsjrrtwcbwK/nzpZBxclXlV7gGl9dgWvu4LF6w==
   dependencies:
     after "0.8.2"
     arraybuffer.slice "~0.0.7"
@@ -4336,6 +4347,18 @@ engine.io@~3.3.1:
     debug "~3.1.0"
     engine.io-parser "~2.1.0"
     ws "~6.1.0"
+
+engine.io@~3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/engine.io/-/engine.io-3.4.0.tgz#3a962cc4535928c252759a00f98519cb46c53ff3"
+  integrity sha512-XCyYVWzcHnK5cMz7G4VTu2W7zJS7SM1QkcelghyIk/FmobWBtXE7fwhBusEKvCSqc3bMh8fNFMlUkCKTFRxH2w==
+  dependencies:
+    accepts "~1.3.4"
+    base64id "2.0.0"
+    cookie "0.3.1"
+    debug "~4.1.0"
+    engine.io-parser "~2.2.0"
+    ws "^7.1.2"
 
 env-ci@^4.0.0:
   version "4.1.1"
@@ -4660,6 +4683,13 @@ events@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/events/-/events-2.1.0.tgz#2a9a1e18e6106e0e812aa9ebd4a819b3c29c0ba5"
   integrity sha512-3Zmiobend8P9DjmKAty0Era4jV8oJ0yGYe2nJJAxgymF9+N8F2m0hhZiMoWtcfepExzNKZumFU3ksdQbInGWCg==
+
+eventsource@^1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.0.7.tgz#8fbc72c93fcd34088090bc0a4e64f4b5cee6d8d0"
+  integrity sha512-4Ln17+vVT0k8aWq+t/bF5arcS3EpT9gYtW66EPacdj/mAFevznsnyoHLPy2BA8gbIQeIHoPsvwmfBftfcG//BQ==
+  dependencies:
+    original "^1.0.0"
 
 evp_bytestokey@^1.0.0, evp_bytestokey@^1.0.3:
   version "1.0.3"
@@ -5143,7 +5173,7 @@ follow-redirects@1.5.10:
   dependencies:
     debug "=3.1.0"
 
-follow-redirects@^1.2.5, follow-redirects@^1.3.0:
+follow-redirects@^1.2.5:
   version "1.7.0"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.7.0.tgz#489ebc198dc0e7f64167bd23b03c4c19b5784c76"
   integrity sha512-m/pZQy4Gj287eNy94nivy5wchN3Kp+Q5WgUPNy5lJSZ3sgkVKSYV/ZChMAQVIgx1SqfZ2zBZtPA2YlXIWxxJOQ==
@@ -7496,6 +7526,11 @@ lodash@=4.17.11, lodash@^4.14.0, lodash@^4.17.11, lodash@^4.17.4, lodash@^4.17.5
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.11.tgz#b39ea6229ef607ecd89e2c8df12536891cac9b8d"
   integrity sha512-cQKh8igo5QUhZ7lg38DYWAxMvjSAKG0A8wGSVimP07SIUEK2UO+arSRKbRZWtelMtN5V0Hkwh5ryOto/SshYIg==
 
+lodash@=4.17.15, lodash@^4.17.14:
+  version "4.17.15"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.15.tgz#b447f6670a0455bbfeedd11392eff330ea097548"
+  integrity sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==
+
 lodash@~1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-1.0.2.tgz#8f57560c83b59fc270bd3d561b690043430e2551"
@@ -8978,6 +9013,13 @@ ordered-read-streams@^1.0.0:
   dependencies:
     readable-stream "^2.0.1"
 
+original@^1.0.0:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/original/-/original-1.0.2.tgz#e442a61cffe1c5fd20a65f3261c26663b303f25f"
+  integrity sha512-hyBVl6iqqUOJ8FqRe+l/gS8H+kKYjrEndd5Pm1MfBtsEKA038HkkdbAl/72EAXGyonD/PFsvmVG+EvcIpliMBg==
+  dependencies:
+    url-parse "^1.4.3"
+
 os-browserify@~0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/os-browserify/-/os-browserify-0.3.0.tgz#854373c7f5c2315914fc9bfc6bd8238fdda1ec27"
@@ -9949,6 +9991,11 @@ querystring@0.2.0:
   resolved "https://registry.yarnpkg.com/querystring/-/querystring-0.2.0.tgz#b209849203bb25df820da756e747005878521620"
   integrity sha1-sgmEkgO7Jd+CDadW50cAWHhSFiA=
 
+querystringify@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/querystringify/-/querystringify-2.1.1.tgz#60e5a5fd64a7f8bfa4d2ab2ed6fdf4c85bad154e"
+  integrity sha512-w7fLxIRCRT7U8Qu53jQnJyPkYZIaR4n5151KMfcJlO/A9397Wxb1amJvROTK6TOnp7PfoAmg/qXiNHI+08jRfA==
+
 quick-lru@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/quick-lru/-/quick-lru-1.1.0.tgz#4360b17c61136ad38078397ff11416e186dcfbb8"
@@ -10466,6 +10513,11 @@ require_optional@~1.0.0:
     resolve-from "^2.0.0"
     semver "^5.1.0"
 
+requires-port@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/requires-port/-/requires-port-1.0.0.tgz#925d2601d39ac485e091cf0da5c6e694dc3dcaff"
+  integrity sha1-kl0mAdOaxIXgkc8NpcbmlNw9yv8=
+
 resolve-dir@^1.0.0, resolve-dir@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/resolve-dir/-/resolve-dir-1.0.1.tgz#79a40644c362be82f26effe739c9bb5382046f43"
@@ -10927,15 +10979,19 @@ slide@^1.1.5, slide@^1.1.6, slide@~1.1.3, slide@~1.1.6:
   resolved "https://registry.yarnpkg.com/slide/-/slide-1.1.6.tgz#56eb027d65b4d2dce6cb2e2d32c4d4afc9e1d707"
   integrity sha1-VusCfWW00tzmyy4tMsTUr8nh1wc=
 
-slp-sdk@4.3.0:
-  version "4.3.0"
-  resolved "https://registry.yarnpkg.com/slp-sdk/-/slp-sdk-4.3.0.tgz#723248ee84892882a286d05553a9c79354147db5"
-  integrity sha512-3FqxleVpGgEBxkyeidQiKDEx/aX89uLgPdYVsgRBeWm7zYaNsTpzh2POMJinzWe1eok7iq1WbgQSCpdAu3hMug==
+slp-sdk@^4.15.0:
+  version "4.15.0"
+  resolved "https://registry.yarnpkg.com/slp-sdk/-/slp-sdk-4.15.0.tgz#7bff7d5a6a529e32749ceb3c3b354760ab04f7c8"
+  integrity sha512-C5TA88ECnf5DLlrqOGrNoT57vNXB7DrozX1i0eX7FuS/Mm8S0pKYdlvyOEGsvZ1xrn3qNXNAWBWS+ZnVDAwyjg==
   dependencies:
-    axios "^0.17.1"
+    "@types/bigi" "^1.4.2"
+    "@types/bip39" "^2.4.2"
+    "@types/randombytes" "^2.0.0"
+    "@types/wif" "^2.0.1"
+    axios "0.19.0"
     babel-register "^6.26.0"
     bignumber.js "^8.0.2"
-    bitbox-sdk "8.1.0"
+    bitbox-sdk "8.10.1"
     chalk "^2.3.0"
     clear "0.1.0"
     commander "^2.13.0"
@@ -10944,20 +11000,26 @@ slp-sdk@4.3.0:
     mkdirp "^0.5.1"
     node-emoji "^1.8.1"
     repl.history "^0.1.4"
-    slpjs "0.18.0"
+    slpjs "^0.23.0"
     touch "^3.1.0"
 
-slpjs@0.18.0:
-  version "0.18.0"
-  resolved "https://registry.yarnpkg.com/slpjs/-/slpjs-0.18.0.tgz#b7e8910073db41ecdd06302baa4d96d8bb91c573"
-  integrity sha512-DGXRX7txx34mE9rkUOZV7xYW8jbGMD7yzsIUWiTDBR4/8oNKQkaFjPKXML/jdwz0SeyEPkhQzcY5hPi0CCk3cg==
+slpjs@^0.23.0:
+  version "0.23.3"
+  resolved "https://registry.yarnpkg.com/slpjs/-/slpjs-0.23.3.tgz#af0c3fdb6685c16b7220625932ac3402f534af74"
+  integrity sha512-2cmU6IsshvNFj0n0tg0aO/1rKxQMYvUhJ75U6kUqfzF03FjMxGUaZAqszKQZQ/0utw/fLQEatNriXI5iePLNdQ==
   dependencies:
+    "@types/bigi" "^1.4.2"
+    "@types/bip39" "^2.4.2"
     "@types/lodash" "^4.14.120"
-    axios "^0.18.0"
-    bchaddrjs-slp "git://github.com/simpleledger/bchaddrjs.git#master"
+    "@types/randombytes" "^2.0.0"
+    "@types/socket.io" "^2.1.2"
+    "@types/socket.io-client" "^1.4.32"
+    "@types/wif" "^2.0.1"
+    axios "^0.18.1"
+    bchaddrjs-slp "0.2.8"
     bignumber.js "^8.1.1"
-    bitcore-lib-cash "^0.19.0"
-    lodash "^4.17.11"
+    bitcore-lib-cash "^9.0.0"
+    lodash "^4.17.14"
 
 smart-buffer@4.0.2:
   version "4.0.2"
@@ -11019,6 +11081,26 @@ socket.io-client@2.2.0, socket.io-client@^2.1.1:
     socket.io-parser "~3.3.0"
     to-array "0.1.4"
 
+socket.io-client@2.3.0, socket.io-client@^2.2.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/socket.io-client/-/socket.io-client-2.3.0.tgz#14d5ba2e00b9bcd145ae443ab96b3f86cbcc1bb4"
+  integrity sha512-cEQQf24gET3rfhxZ2jJ5xzAOo/xhZwK+mOqtGRg5IowZsMgwvHwnf/mCRapAAkadhM26y+iydgwsXGObBB5ZdA==
+  dependencies:
+    backo2 "1.0.2"
+    base64-arraybuffer "0.1.5"
+    component-bind "1.0.0"
+    component-emitter "1.2.1"
+    debug "~4.1.0"
+    engine.io-client "~3.4.0"
+    has-binary2 "~1.0.2"
+    has-cors "1.1.0"
+    indexof "0.0.1"
+    object-component "0.0.3"
+    parseqs "0.0.5"
+    parseuri "0.0.5"
+    socket.io-parser "~3.3.0"
+    to-array "0.1.4"
+
 socket.io-parser@~3.3.0:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/socket.io-parser/-/socket.io-parser-3.3.0.tgz#2b52a96a509fdf31440ba40fed6094c7d4f1262f"
@@ -11026,6 +11108,15 @@ socket.io-parser@~3.3.0:
   dependencies:
     component-emitter "1.2.1"
     debug "~3.1.0"
+    isarray "2.0.1"
+
+socket.io-parser@~3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/socket.io-parser/-/socket.io-parser-3.4.0.tgz#370bb4a151df2f77ce3345ff55a7072cc6e9565a"
+  integrity sha512-/G/VOI+3DBp0+DJKW4KesGnQkQPFmUCbA/oO2QGT6CWxU7hLGWqU3tyuzeSK/dqcyeHsQg1vTe9jiZI8GU9SCQ==
+  dependencies:
+    component-emitter "1.2.1"
+    debug "~4.1.0"
     isarray "2.0.1"
 
 socket.io@^2.1.1:
@@ -11039,6 +11130,18 @@ socket.io@^2.1.1:
     socket.io-adapter "~1.1.0"
     socket.io-client "2.2.0"
     socket.io-parser "~3.3.0"
+
+socket.io@^2.2.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/socket.io/-/socket.io-2.3.0.tgz#cd762ed6a4faeca59bc1f3e243c0969311eb73fb"
+  integrity sha512-2A892lrj0GcgR/9Qk81EaY2gYhCBxurV0PfmmESO6p27QPrUK1J3zdns+5QPqvUYK2q657nSj0guoIil9+7eFg==
+  dependencies:
+    debug "~4.1.0"
+    engine.io "~3.4.0"
+    has-binary2 "~1.0.2"
+    socket.io-adapter "~1.1.0"
+    socket.io-client "2.3.0"
+    socket.io-parser "~3.4.0"
 
 socks-proxy-agent@^4.0.0:
   version "4.0.2"
@@ -12141,6 +12244,14 @@ url-parse-lax@^1.0.0:
   dependencies:
     prepend-http "^1.0.1"
 
+url-parse@^1.4.3:
+  version "1.4.7"
+  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.4.7.tgz#a8a83535e8c00a316e403a5db4ac1b9b853ae278"
+  integrity sha512-d3uaVyzDB9tQoSXFvuSUNFibTd9zxd2bkVrDRvF5TmvWWQwqE4lgYJ5m+x1DbecWkw+LK4RNl2CU1hHuOKPVlg==
+  dependencies:
+    querystringify "^2.1.1"
+    requires-port "^1.0.0"
+
 url-template@^2.0.8:
   version "2.0.8"
   resolved "https://registry.yarnpkg.com/url-template/-/url-template-2.0.8.tgz#fc565a3cccbff7730c775f5641f9555791439f21"
@@ -12497,6 +12608,11 @@ ws@^3.2.0:
     async-limiter "~1.0.0"
     safe-buffer "~5.1.0"
     ultron "~1.1.0"
+
+ws@^7.1.2:
+  version "7.2.1"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-7.2.1.tgz#03ed52423cd744084b2cf42ed197c8b65a936b8e"
+  integrity sha512-sucePNSafamSKoOqoNfBd8V0StlkzJKL2ZAhGQinCfNQ+oacw+Pk7lcdAElecBF2VkLNZRiIb5Oi1Q5lVUVt2A==
 
 ws@~6.1.0:
   version "6.1.4"

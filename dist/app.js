@@ -43,7 +43,8 @@ var slpV2 = require("./routes/v2/slp");
 // v3
 var indexV3 = require("./routes/v3/index");
 var healthCheckV3 = require("./routes/v3/health-check");
-var addressV3 = require("./routes/v3/address");
+var AddressV3 = require("./routes/v3/address-new");
+var addressV3 = new AddressV3();
 var cashAccountsV3 = require("./routes/v3/cashaccounts");
 var blockV3 = require("./routes/v3/block");
 var blockchainV3 = require("./routes/v3/blockchain");

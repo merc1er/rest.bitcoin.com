@@ -794,7 +794,10 @@ describe("#SLP", () => {
       } catch (err) {
         // console.log(`err.message: ${util.inspect(err.message)}`)
 
-        assert.include(err.message, `Unsupported address format`)
+        assert.include(
+          err.message,
+          `Invalid BCH address. Double check your address`
+        )
       }
     })
 

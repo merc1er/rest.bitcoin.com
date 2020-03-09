@@ -9,7 +9,7 @@ require("winston-daily-rotate-file")
 
 var NETWORK = process.env.NETWORK
 
-// Configure daily-rotation transport.
+// Configure daily-rotation transport. test.
 // Configured to only save 20 megs worth of files. Specifically 20 files of
 // 1 megabyte each. Old log files will be deleted to make room for new log files.
 var transport = new winston.transports.DailyRotateFile({
