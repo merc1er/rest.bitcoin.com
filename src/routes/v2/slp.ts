@@ -2345,6 +2345,10 @@ async function txsByAddressSingle(
       return res.json({ error: "address can not be empty" })
     }
 
+    const fromBlock: number = req.query.fromBlock
+      ? parseInt(req.query.fromBlock, 10)
+      : 0
+
     // Ensure the input is a valid BCH address.
     try {
       utils.toCashAddress(address)
@@ -2365,10 +2369,17 @@ async function txsByAddressSingle(
       })
     }
 
-    const transactions = await slpDataService.getHistoricalSlpTransactions([address])
+    const transactions = await slpDataService.getHistoricalSlpTransactions([address], fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
 
     res.status(200)
-    return res.json(transactions)
+    return res.json(returnData)
   } catch (err) {
     wlogger.error(`Error in slp.ts/txsByAddressSingle().`, err)
 
@@ -2401,6 +2412,10 @@ async function txsByAddressBulk(
         error: "addresses needs to be an array. Use GET for single address."
       })
     }
+
+    const fromBlock: number = req.body.fromBlock
+      ? parseInt(req.body.fromBlock, 10)
+      : 0
 
     // Enforce array size rate limits
     if (!routeUtils.validateArraySize(req, addresses)) {
@@ -2439,10 +2454,17 @@ async function txsByAddressBulk(
       }
     }
 
-    const transactions = await slpDataService.getHistoricalSlpTransactions(addresses)
+    const transactions = await slpDataService.getHistoricalSlpTransactions(addresses, fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
 
     res.status(200)
-    return res.json(transactions)
+    return res.json(returnData)
   } catch (err) {
     wlogger.error(`Error in slp.ts/txsByAddressBulk().`, err)
 
