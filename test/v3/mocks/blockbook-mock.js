@@ -16,6 +16,17 @@ const balance = {
   txids: ["6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d"]
 }
 
+const utxo = [
+  {
+    txid: "6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d",
+    vout: 0,
+    value: "1000",
+    height: 601861,
+    confirmations: 24163
+  }
+]
+
 module.exports = {
-  balance
+  balance,
+  utxo
 }

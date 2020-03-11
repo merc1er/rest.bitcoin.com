@@ -78,6 +78,56 @@ class Blockbook {
       throw err
     }
   }
+
+  // Query the Blockbook API for UTXOs associated with a single BCH address.
+  // Returns a Promise.
+  async utxo(thisAddress) {
+    try {
+      // Convert the address to a cashaddr without a prefix.
+      const addr = _this.bitbox.Address.toCashAddress(thisAddress)
+
+      const path = `${BLOCKBOOK_URL}api/v2/utxo/${addr}`
+      // console.log(`path: ${path}`)
+
+      // Query the Blockbook Node API.
+      const axiosResponse = await _this.axios.get(path, axiosOptions)
+      const retData = axiosResponse.data
+      // console.log(`retData: ${JSON.stringify(retData, null, 2)}`)
+
+      const specUtxos = []
+
+      // Loops through each returned UTXO.
+      for (let i = 0; i < retData.length; i++) {
+        const thisUtxo = retData[i]
+
+        // Parse the raw data into the format specified in docs/v3/api-spec.md.
+        const specData = {
+          txid: thisUtxo.txid,
+          index: thisUtxo.vout,
+          satoshis: Number(thisUtxo.value),
+          height: thisUtxo.height,
+          slpData: {
+            isSlp: false
+          }
+        }
+
+        specUtxos.push(specData)
+      }
+
+      // Ensure the final output data meets the spec defined in /docs/v3/api-spec.md
+      const outData = {
+        address: addr,
+        utxos: specUtxos
+      }
+
+      return outData
+    } catch (err) {
+      // Dev Note: Do not log error messages here. Throw them instead and let the
+      // parent function handle it.
+      wlogger.debug("Error in blockbook.js/balance()")
+      throw err
+    }
+  }
 }
 
 module.exports = Blockbook

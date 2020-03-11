@@ -10,7 +10,8 @@ const bitbox = new BITBOX()
 
 const NINSIGHT_URL = process.env.NINSIGHT_URL
   ? process.env.NINSIGHT_URL
-  : "https://bch-explorer.api.bitcoin.com/v1/"
+  : // : "https://bch-explorer.api.bitcoin.com/v1/"
+    "https://explorer.api.bitcoin.com/bch/v1/"
 
 const axiosOptions = { timeout: 15000 }
 
