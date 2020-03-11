@@ -124,7 +124,7 @@ class Blockbook {
     } catch (err) {
       // Dev Note: Do not log error messages here. Throw them instead and let the
       // parent function handle it.
-      wlogger.debug("Error in blockbook.js/balance()")
+      wlogger.debug("Error in blockbook.js/utxo()")
       throw err
     }
   }

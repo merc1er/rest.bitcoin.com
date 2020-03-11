@@ -58,7 +58,7 @@ describe("#Blockbook", () => {
       const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
 
       const result = await uut.utxo(addr)
-      console.log(`result: ${JSON.stringify(result, null, 2)}`)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
       assert.property(result, "address")
 

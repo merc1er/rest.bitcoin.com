@@ -30,8 +30,6 @@ class Ninsight {
   // Returns a Promise.
   async balance(thisAddress) {
     try {
-      // console.log(`BLOCKBOOK_URL: ${BLOCKBOOK_URL}`)
-
       // Convert the address to a cashaddr without a prefix.
       const addr = _this.bitbox.Address.toCashAddress(thisAddress)
 
@@ -67,6 +65,54 @@ class Ninsight {
       // Dev Note: Do not log error messages here. Throw them instead and let the
       // parent function handle it.
       wlogger.debug("Error in ninsight.js/balance()")
+      throw err
+    }
+  }
+
+  // Query the Ninsight API for UTXOs associated with a single BCH address.
+  // Returns a Promise.
+  async utxo(thisAddress) {
+    try {
+      // Convert the address to a cashaddr without a prefix.
+      const addr = _this.bitbox.Address.toCashAddress(thisAddress)
+
+      const path = `${NINSIGHT_URL}addr/${addr}/utxo`
+      // console.log(`path: ${path}`)
+
+      // Query the Blockbook Node API.
+      const axiosResponse = await _this.axios.get(path, axiosOptions)
+      const retData = axiosResponse.data
+      // console.log(`retData: ${JSON.stringify(retData, null, 2)}`)
+
+      const specUtxos = []
+
+      // Loops through each returned UTXO.
+      for (let i = 0; i < retData.length; i++) {
+        const thisUtxo = retData[i]
+
+        const specData = {
+          txid: thisUtxo.txid,
+          index: thisUtxo.vout,
+          satoshis: thisUtxo.satoshis,
+          height: thisUtxo.height,
+          slpData: {
+            isSlp: false
+          }
+        }
+
+        specUtxos.push(specData)
+      }
+
+      const outData = {
+        address: addr,
+        utxos: specUtxos
+      }
+
+      return outData
+    } catch (err) {
+      // Dev Note: Do not log error messages here. Throw them instead and let the
+      // parent function handle it.
+      wlogger.debug("Error in ninsight.js/utxo()")
       throw err
     }
   }
