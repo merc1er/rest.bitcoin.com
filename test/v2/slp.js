@@ -1230,7 +1230,7 @@ describe("#SLP", () => {
       const result = await txsByAddressSingle(req, res)
       // console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
-      assert.isArray(result)
+      assert.isArray(result.txs)
     })
 
   })
@@ -1294,7 +1294,7 @@ describe("#SLP", () => {
       const result = await txsByAddressBulk(req, res)
       // console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
-      assert.isArray(result)
+      assert.isArray(result.txs)
     })
   })
 })
