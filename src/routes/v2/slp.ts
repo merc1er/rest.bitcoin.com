@@ -68,6 +68,8 @@ router.get("/validateTxid/:txid", validateSingle)
 router.get("/txDetails/:txid", txDetails)
 router.get("/tokenStats/:tokenId", tokenStatsSingle)
 router.post("/tokenStats", tokenStatsBulk)
+router.get("/transactionHistoryAllTokens/:address", txsByAddressSingle)
+router.post("/transactionHistoryAllTokens", txsByAddressBulk)
 router.get("/transactions/:tokenId/:address", txsTokenIdAddressSingle)
 router.post("/transactions", txsTokenIdAddressBulk)
 router.get("/burnTotal/:transactionId", burnTotalSingle)
@@ -2329,6 +2331,157 @@ async function tokenStatsBulk(
   return res.json(validTxids)
 }
 
+// Retrieve transactions by address.
+async function txsByAddressSingle(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    // Validate the input data.
+    const address: string = req.params.address
+    if (!address || address === "") {
+      res.status(400)
+      return res.json({ error: "address can not be empty" })
+    }
+
+    const fromBlock: number = req.query.fromBlock
+      ? parseInt(req.query.fromBlock, 10)
+      : 0
+
+    // Ensure the input is a valid BCH address.
+    try {
+      utils.toCashAddress(address)
+    } catch (err) {
+      res.status(400)
+      return res.json({
+        error: `Invalid BCH address. Double check your address is valid: ${address}`
+      })
+    }
+
+    // Ensure it is using the correct network.
+    const cashAddr: string = utils.toCashAddress(address)
+    const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
+    if (!networkIsValid) {
+      res.status(400)
+      return res.json({
+        error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
+      })
+    }
+
+    const transactions = await slpDataService.getHistoricalSlpTransactions([address], fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
+
+    res.status(200)
+    return res.json(returnData)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsByAddressSingle().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactionHistoryAllTokens/:address: ${err.message}`
+    })
+  }
+}
+
+async function txsByAddressBulk(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    const addresses = req.body.addresses
+
+    // Reject if addresses is not an array
+    if (!addresses || !Array.isArray(addresses)) {
+      res.status(400)
+      return res.json({
+        error: "addresses needs to be an array. Use GET for single address."
+      })
+    }
+
+    const fromBlock: number = req.body.fromBlock
+      ? parseInt(req.body.fromBlock, 10)
+      : 0
+
+    // Enforce array size rate limits
+    if (!routeUtils.validateArraySize(req, addresses)) {
+      res.status(429)
+      return res.json({
+        error: `Array too large.`
+      })
+    }
+
+    // Validate each address
+    for (let address of addresses) {
+      // Validate input data.
+      if (!address || address === "") {
+        res.status(400)
+        return res.json({ error: "address can not be empty" })
+      }
+
+      // Ensure the input is a valid BCH address.
+      try {
+        utils.toCashAddress(address)
+      } catch (err) {
+        res.status(400)
+        return res.json({
+          error: `Invalid BCH address. Double check your address is valid: ${address}`
+        })
+      }
+
+      // Ensure it is using the correct network.
+      const cashAddr: string = utils.toCashAddress(address)
+      const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
+      if (!networkIsValid) {
+        res.status(400)
+        return res.json({
+          error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
+        })
+      }
+    }
+
+    const transactions = await slpDataService.getHistoricalSlpTransactions(addresses, fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
+
+    res.status(200)
+    return res.json(returnData)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsByAddressBulk().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactionHistoryAllTokens ${err.message}`
+    })
+  }
+}
+
 // Retrieve transactions by tokenId and address.
 async function txsTokenIdAddressSingle(
   req: express.Request,
@@ -2560,6 +2713,8 @@ module.exports = {
     balancesForTokenBulk,
     txsTokenIdAddressSingle,
     txsTokenIdAddressBulk,
+    txsByAddressSingle,
+    txsByAddressBulk,
     burnTotalSingle,
     burnTotalBulk
   }

@@ -47,7 +47,8 @@ const slpV2 = require("./routes/v2/slp")
 // v3
 const indexV3 = require("./routes/v3/index")
 const healthCheckV3 = require("./routes/v3/health-check")
-const addressV3 = require("./routes/v3/address")
+const AddressV3 = require("./routes/v3/address-new")
+const addressV3 = new AddressV3()
 const cashAccountsV3 = require("./routes/v3/cashaccounts")
 const blockV3 = require("./routes/v3/block")
 const blockchainV3 = require("./routes/v3/blockchain")
@@ -123,7 +124,7 @@ app.use(
 )
 
 const v2prefix = "v2"
-const v3prefix = "v3"
+const v3prefix = "v3-alpha"
 
 // Instantiate the authorization middleware, used to implement pro-tier rate limiting.
 const auth = new AuthMW()

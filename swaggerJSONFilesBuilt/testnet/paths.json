@@ -2053,6 +2053,69 @@
 				}
 			}
 		},
+		"/slp/transactionHistoryAllTokens/{address}": {
+			"get": {
+				"tags": [
+					"slp"
+				],
+				"summary": "SLP transactions by address (alpha endpoint)",
+				"description": "Returns recent transactions from or to one address (alpha endpoint).",
+				"operationId": "txsByAddressSingle",
+				"parameters": [
+					{
+						"name": "address",
+						"in": "path",
+						"description": "The slp address",
+						"required": true,
+						"example": "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "fromBlock",
+						"in": "query",
+						"description": "Only return transactions after this block",
+						"required": false,
+						"example": 0,
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "successful response"
+					}
+				}
+			}
+		},
+		"/slp/transactionHistoryAllTokens": {
+			"post": {
+				"tags": [
+					"slp"
+				],
+				"summary": "Bulk SLP transactions by address (alpha endpoint)",
+				"description": "Returns recent transactions from or to multiple addresses (alpha endpoint).",
+				"operationId": "txsByAddressBulk",
+				"requestBody": {
+					"description": "",
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SLPtransactionHistoryAllTokens"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "successful response"
+					}
+				}
+			}
+		},
 		"/slp/burnTotal/{transactionId}": {
 			"get": {
 				"tags": [

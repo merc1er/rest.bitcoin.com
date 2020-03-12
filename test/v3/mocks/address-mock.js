@@ -150,9 +150,46 @@ const mockTransactions = {
   ]
 }
 
+const mockBalance = {
+  balance: 0.00001,
+  balanceSat: 1000,
+  totalReceived: 0.00001,
+  totalReceivedSat: 1000,
+  totalSent: 0,
+  totalSentSat: 0,
+  unconfirmedBalance: 0,
+  unconfirmedBalanceSat: 0,
+  unconfirmedTxApperances: 0,
+  txApperances: 1,
+  slpData: {},
+  transactions: [
+    "6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d"
+  ],
+  address: "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7",
+  addressLegacy: "1A2fmjLeJXGbkQoTZDi2RdvcASGXgKEjvj",
+  addressSlp: "simpleledger:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zg8d0n8hxq"
+}
+
+mockUtxo = {
+  address: "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7",
+  utxos: [
+    {
+      txid: "6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d",
+      index: 0,
+      satoshis: 1000,
+      height: 601861,
+      slpData: {
+        isSlp: false
+      }
+    }
+  ]
+}
+
 module.exports = {
   mockAddressDetails,
   mockUtxoDetails,
   mockUnconfirmed,
-  mockTransactions
+  mockTransactions,
+  mockBalance,
+  mockUtxo
 }
