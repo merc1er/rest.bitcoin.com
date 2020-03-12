@@ -86,4 +86,55 @@ describe("#Ninsight", () => {
       }
     })
   })
+
+  describe("#utxo", () => {
+    it("should retrieve BCH balance and output should comply with spec", async () => {
+      // console.log(`mockData: ${JSON.stringify(mockData, null, 2)}`)
+
+      // Use mocks to prevent live network calls.
+      sandbox.stub(uut.axios, "get").resolves({ data: mockData.utxo })
+
+      const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
+
+      const result = await uut.utxo(addr)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      // Ensure the returned value meets the specificiations in /docs/v3/api-spec.md
+      assert.property(result, "address")
+
+      assert.property(result, "utxos")
+      assert.isArray(result.utxos)
+
+      assert.property(result.utxos[0], "txid")
+      assert.isString(result.utxos[0].txid)
+
+      assert.property(result.utxos[0], "index")
+      assert.isNumber(result.utxos[0].index)
+
+      assert.property(result.utxos[0], "satoshis")
+      assert.isNumber(result.utxos[0].satoshis)
+
+      assert.property(result.utxos[0], "height")
+      assert.isNumber(result.utxos[0].height)
+
+      assert.property(result.utxos[0], "slpData")
+      assert.property(result.utxos[0].slpData, "isSlp")
+      assert.equal(result.utxos[0].slpData.isSlp, false)
+    })
+
+    it("should handle thrown errors", async () => {
+      try {
+        // Force axios to throw an error
+        sandbox.stub(uut.axios, "get").rejects(new Error("ENETUNREACH"))
+
+        const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
+
+        await uut.utxo(addr)
+
+        assert.equal(true, false, "unexpected result")
+      } catch (err) {
+        assert.include(err.message, "ENETUNREACH")
+      }
+    })
+  })
 })

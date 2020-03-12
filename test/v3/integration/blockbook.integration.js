@@ -18,7 +18,7 @@ describe("#Blockbook", () => {
       const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
 
       const result = await uut.balance(addr)
-      console.log(`result: ${JSON.stringify(result, null, 2)}`)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
 
       // Ensure the returned value meets the specificiations in /docs/v3/api-spec.md
       assert.property(result, "balance")
@@ -50,6 +50,36 @@ describe("#Blockbook", () => {
       assert.isString(result.addressLegacy)
       assert.property(result, "addressSlp")
       assert.isString(result.addressSlp)
+    })
+  })
+
+  describe("#utxo", () => {
+    it("should retrieve BCH balance and output should comply with spec", async () => {
+      const addr = "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7"
+
+      const result = await uut.utxo(addr)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.property(result, "address")
+
+      assert.property(result, "utxos")
+      assert.isArray(result.utxos)
+
+      assert.property(result.utxos[0], "txid")
+      assert.isString(result.utxos[0].txid)
+
+      assert.property(result.utxos[0], "index")
+      assert.isNumber(result.utxos[0].index)
+
+      assert.property(result.utxos[0], "satoshis")
+      assert.isNumber(result.utxos[0].satoshis)
+
+      assert.property(result.utxos[0], "height")
+      assert.isNumber(result.utxos[0].height)
+
+      assert.property(result.utxos[0], "slpData")
+      assert.property(result.utxos[0].slpData, "isSlp")
+      assert.equal(result.utxos[0].slpData.isSlp, false)
     })
   })
 })

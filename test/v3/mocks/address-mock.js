@@ -170,10 +170,26 @@ const mockBalance = {
   addressSlp: "simpleledger:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zg8d0n8hxq"
 }
 
+mockUtxo = {
+  address: "bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7",
+  utxos: [
+    {
+      txid: "6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d",
+      index: 0,
+      satoshis: 1000,
+      height: 601861,
+      slpData: {
+        isSlp: false
+      }
+    }
+  ]
+}
+
 module.exports = {
   mockAddressDetails,
   mockUtxoDetails,
   mockUnconfirmed,
   mockTransactions,
-  mockBalance
+  mockBalance,
+  mockUtxo
 }

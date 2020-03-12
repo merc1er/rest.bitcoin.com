@@ -19,6 +19,20 @@ const balance = {
   ]
 }
 
+utxo = [
+  {
+    address: "1A2fmjLeJXGbkQoTZDi2RdvcASGXgKEjvj",
+    txid: "6181c669614fa18039a19b23eb06806bfece1f7514ab457c3bb82a40fe171a6d",
+    vout: 0,
+    scriptPubKey: "76a9146309e99f709479af698bb641f7d202d693785a1288ac",
+    amount: 0.00001,
+    satoshis: 1000,
+    height: 601861,
+    confirmations: 24166
+  }
+]
+
 module.exports = {
-  balance
+  balance,
+  utxo
 }
