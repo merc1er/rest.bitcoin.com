@@ -244,4 +244,182 @@ describe("#AddressRouter", () => {
       assert.include(result.error, "Network error")
     })
   })
+
+  describe("#utxo", () => {
+    it("should throw an error for an empty body", async () => {
+      req.body = {}
+
+      const result = await uut.utxo(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.equal(res.statusCode, 400, "HTTP status code 400 expected.")
+      assert.include(
+        result.error,
+        "addresses needs to be an array",
+        "Proper error message"
+      )
+    })
+
+    it("should error on non-array single address", async () => {
+      req.body = {
+        address: `qzs02v05l7qs5s24srqju498qu55dwuj0cx5ehjm2c`
+      }
+
+      const result = await uut.utxo(req, res)
+
+      assert.equal(res.statusCode, 400, "HTTP status code 400 expected.")
+      assert.include(
+        result.error,
+        "addresses needs to be an array",
+        "Proper error message"
+      )
+    })
+
+    it("should throw an error for an invalid address", async () => {
+      req.body = {
+        addresses: [`02v05l7qs5s24srqju498qu55dwuj0cx5ehjm2c`]
+      }
+
+      const result = await uut.utxo(req, res)
+
+      assert.equal(res.statusCode, 400, "HTTP status code 400 expected.")
+      assert.include(
+        result.error,
+        "Invalid BCH address",
+        "Proper error message"
+      )
+    })
+
+    it("should throw 400 error if addresses array is too large", async () => {
+      const testArray = []
+      for (var i = 0; i < 25; i++) testArray.push("")
+
+      req.body.addresses = testArray
+
+      const result = await uut.utxo(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "Array too large")
+    })
+
+    it("should detect a network mismatch", async () => {
+      req.body = {
+        addresses: [`bchtest:qrvu0jvqv6qukfuj59lmgyg826e69625xgge5fhpzk`]
+      }
+
+      const result = await uut.utxo(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.equal(res.statusCode, 400, "HTTP status code 400 expected.")
+      assert.include(result.error, "Invalid network", "Proper error message")
+    })
+
+    it("should get details for a single address", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "utxo").resolves(mockData.mockUtxo)
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Call the details API.
+      const result = await uut.utxo(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      // Assert that required fields exist in the returned object.
+      assert.equal(result.length, 1, "Array with one entry")
+
+      // Ensure the returned value meets the specificiations in /docs/v3/api-spec.md
+      assert.property(result[0], "address")
+
+      assert.property(result[0], "utxos")
+      assert.isArray(result[0].utxos)
+
+      assert.property(result[0].utxos[0], "txid")
+      assert.isString(result[0].utxos[0].txid)
+
+      assert.property(result[0].utxos[0], "index")
+      assert.isNumber(result[0].utxos[0].index)
+
+      assert.property(result[0].utxos[0], "satoshis")
+      assert.isNumber(result[0].utxos[0].satoshis)
+
+      assert.property(result[0].utxos[0], "height")
+      assert.isNumber(result[0].utxos[0].height)
+
+      assert.property(result[0].utxos[0], "slpData")
+      assert.property(result[0].utxos[0].slpData, "isSlp")
+      assert.equal(result[0].utxos[0].slpData.isSlp, false)
+    })
+
+    it("should get details for multiple addresses", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "utxo").resolves(mockData.mockUtxo)
+
+      req.body = {
+        addresses: [
+          `bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`,
+          `bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`
+        ]
+      }
+
+      // Call the details API.
+      const result = await uut.utxo(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      assert.isArray(result)
+      assert.equal(result.length, 2, "2 outputs for 2 inputs")
+    })
+
+    it("should query Blockbook if flag is set", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.blockbook, "utxo").resolves(mockData.mockUtxo)
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Set the Blockbook indexer flag
+      uut.indexer = "BLOCKBOOK"
+
+      // Call the details API.
+      const result = await uut.utxo(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      // Assert that required fields exist in the returned object.
+      assert.equal(result.length, 1, "Array with one entry")
+    })
+
+    it("should catch and report unhandled errors", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "utxo").rejects(new Error("test error"))
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Call the details API.
+      const result = await uut.utxo(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.property(result, "error")
+    })
+
+    it("should catch and report handled errors", async () => {
+      // Mock the indexer library so that live network calls are not made.
+      sandbox.stub(uut.ninsight, "utxo").rejects(new Error("ENOTFOUND"))
+
+      req.body = {
+        addresses: [`bitcoincash:qp3sn6vlwz28ntmf3wmyra7jqttfx7z6zgtkygjhc7`]
+      }
+
+      // Call the details API.
+      const result = await uut.utxo(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.property(result, "error")
+      assert.include(result.error, "Network error")
+    })
+  })
 })
