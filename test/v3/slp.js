@@ -1230,7 +1230,6 @@ describe("#SLP", () => {
 
       assert.isArray(result.txs)
     })
-
   })
 
   describe("txsByAddressBulk()", () => {

@@ -76,6 +76,8 @@ describe("#SLP", () => {
     nock.cleanAll() // clear interceptor list.
     nock.restore()
 
+    process.env.SLPDB_URL = originalEnvVars.SLPDB_URL
+
     sandbox.restore()
   })
 
@@ -1230,7 +1232,6 @@ describe("#SLP", () => {
 
       assert.isArray(result.txs)
     })
-
   })
 
   describe("txsByAddressBulk()", () => {
