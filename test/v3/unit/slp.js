@@ -21,9 +21,9 @@ const slpRoute = require("../../../dist/routes/v3/slp")
 let originalEnvVars // Used during transition from integration to unit tests.
 
 // Mocking data.
-const { mockReq, mockRes } = require("./mocks/express-mocks")
-const mockData = require("./mocks/slp-mocks")
-const slpjsMock = require("./mocks/slpjs-mocks")
+const { mockReq, mockRes } = require("../mocks/express-mocks")
+const mockData = require("../mocks/slp-mocks")
+const slpjsMock = require("../mocks/slpjs-mocks")
 
 // Used for debugging.
 const util = require("util")
