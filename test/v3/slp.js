@@ -98,30 +98,6 @@ describe("#SLP", () => {
     })
   })
 
-  describe("#lookupToken", () => {
-    const lookupToken = slpRoute.testableComponents.lookupToken
-
-    it("should return 'not found' for invalid token ID.", async () => {
-      // Mock the RPC call for unit tests.
-      if (process.env.TEST === "unit") {
-        nock(process.env.SLPDB_URL)
-          .get(uri => uri.includes("/"))
-          .reply(200, {
-            t: []
-          })
-      }
-
-      const tokenId =
-        "df808a41672a0a0ae6475b44f272a107bc9961b90f29dc918d71301f24fe92fb"
-
-      const result = await lookupToken(tokenId)
-      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
-
-      assert.property(result, "id")
-      assert.equal(result.id, "not found")
-    })
-  })
-
   describe("list()", () => {
     // list route handler
     const list = slpRoute.testableComponents.list
@@ -150,8 +126,6 @@ describe("#SLP", () => {
     it("should GET list", async () => {
       // Mock the RPC call for unit tests.
       if (process.env.TEST === "unit") {
-        const b64 = `eyJ2IjozLCJxIjp7ImRiIjpbInQiXSwiZmluZCI6eyIkcXVlcnkiOnt9fSwicHJvamVjdCI6eyJ0b2tlbkRldGFpbHMiOjEsInRva2VuU3RhdHMiOjEsIl9pZCI6MH0sImxpbWl0IjoxMDB9fQ==`
-
         nock(process.env.SLPDB_URL)
           .get(uri => uri.includes("/"))
           .reply(200, mockData.mockList)
@@ -246,6 +220,14 @@ describe("#SLP", () => {
         nock(mockServerUrl)
           .get(uri => uri.includes("/"))
           .reply(200, mockData.mockSingleToken)
+
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockMintTotal)
+
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockBurnTotal)
       }
 
       req.params.tokenId = tokenIdToTest
@@ -790,7 +772,7 @@ describe("#SLP", () => {
 
         await convertAddressBulk(req, res)
 
-        assert.equal(true, false, "Unsupported address format")
+        assert.equal(true, false, "Unexpected result.")
       } catch (err) {
         // console.log(`err.message: ${util.inspect(err.message)}`)
 
@@ -939,6 +921,14 @@ describe("#SLP", () => {
     it("should get token stats for tokenId", async () => {
       // Mock the RPC call for unit tests.
       if (process.env.TEST === "unit") {
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockMintTotal)
+
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, mockData.mockBurnTotal)
+
         nock(`${process.env.SLPDB_URL}`)
           .get(uri => uri.includes("/"))
           .reply(200, {
@@ -1181,5 +1171,128 @@ describe("#SLP", () => {
       assert.hasAnyKeys(result[0], ["txid", "tokenDetails"])
     })
 */
+  })
+
+  describe("txsByAddressSingle()", () => {
+    const txsByAddressSingle = slpRoute.testableComponents.txsByAddressSingle
+
+    it("should throw 400 if address is missing", async () => {
+      const result = await txsByAddressSingle(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "address can not be empty")
+    })
+
+    it("should throw 400 if address is empty", async () => {
+      req.params.address = ""
+      const result = await txsByAddressSingle(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "address can not be empty")
+    })
+
+    it("should throw 400 if address is invalid", async () => {
+      req.params.address = "badAddress"
+
+      const result = await txsByAddressSingle(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "Invalid BCH address.")
+    })
+
+    it("should throw 400 if address network mismatch", async () => {
+      req.params.address =
+        "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+
+      const result = await txsByAddressSingle(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "Invalid")
+    })
+
+    it("should get tx history", async () => {
+      if (process.env.TEST === "unit") {
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, {
+            c: mockData.mockTransactions
+          })
+      }
+
+      req.params.address = "slptest:qr83cu3p7yg9yac7qthwm0nul2ev2kukvsqmes3vl0"
+
+      const result = await txsByAddressSingle(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.isArray(result.txs)
+    })
+
+  })
+
+  describe("txsByAddressBulk()", () => {
+    const txsByAddressBulk = slpRoute.testableComponents.txsByAddressBulk
+
+    it("should throw 400 if address is missing", async () => {
+      const result = await txsByAddressBulk(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "addresses needs to be an array")
+    })
+
+    it("should throw 400 if address is empty", async () => {
+      req.body.addresses = [""]
+      const result = await txsByAddressBulk(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "address can not be empty")
+    })
+
+    it("should throw 400 if address is invalid", async () => {
+      req.body.addresses = ["badAddress"]
+
+      const result = await txsByAddressBulk(req, res)
+      //console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "Invalid BCH address.")
+    })
+
+    it("should throw 400 if address network mismatch", async () => {
+      req.body.addresses = [
+        "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+      ]
+
+      const result = await txsByAddressBulk(req, res)
+      // console.log(`result: ${util.inspect(result)}`)
+
+      assert.hasAllKeys(result, ["error"])
+      assert.include(result.error, "Invalid network")
+    })
+
+    it("should get tx history", async () => {
+      if (process.env.TEST === "unit") {
+        nock(`${process.env.SLPDB_URL}`)
+          .get(uri => uri.includes("/"))
+          .reply(200, {
+            c: mockData.mockTransactions
+          })
+      }
+
+      req.body.addresses = [
+        "slptest:qr83cu3p7yg9yac7qthwm0nul2ev2kukvsqmes3vl0",
+        "slptest:qz35h5mfa8w2pqma2jq06lp7dnv5fxkp2shlcycvd5"
+      ]
+
+      const result = await txsByAddressBulk(req, res)
+      // console.log(`result: ${JSON.stringify(result, null, 2)}`)
+
+      assert.isArray(result.txs)
+    })
   })
 })
