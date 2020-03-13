@@ -16,7 +16,7 @@ const sinon = require("sinon")
 const axios = require("axios")
 
 // Prepare the slpRoute for stubbing dependcies on slpjs.
-const slpRoute = require("../../dist/routes/v3/slp")
+const slpRoute = require("../../../dist/routes/v3/slp")
 
 let originalEnvVars // Used during transition from integration to unit tests.
 
