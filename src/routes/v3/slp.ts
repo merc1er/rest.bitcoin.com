@@ -21,6 +21,11 @@ import wlogger = require("../../util/winston-logging")
 
 import { BITBOX } from "bitbox-sdk"
 
+// Services
+import { SlpIndexer } from './services/slpIndexer'
+import { Slpdb } from "./services/slpdb"
+import { ISlpData } from "./interfaces/ISlpData";
+
 const transactions = require("./transaction")
 
 // consts
@@ -31,6 +36,8 @@ const SLP: any = new SLPSDK()
 const slp: any = SLP.slpjs
 const utils: any = slp.Utils
 
+const slpDataService: ISlpData = process.env.SLP_INDEXER_URL ? new SlpIndexer() : new Slpdb()
+
 // Used to convert error messages to strings, to safely pass to users.
 util.inspect.defaultOptions = { depth: 5 }
 
@@ -39,10 +46,6 @@ util.inspect.defaultOptions = { depth: 5 }
 if (!process.env.REST_URL) process.env.REST_URL = `https://rest.bitcoin.com/v2/`
 if (!process.env.TREST_URL)
   process.env.TREST_URL = `https://trest.bitcoin.com/v2/`
-
-// Determine the Access password for a private instance of SLPDB.
-// https://gist.github.com/christroutner/fc717ca704dec3dded8b52fae387eab2
-const SLPDB_PASS = process.env.SLPDB_PASS ? process.env.SLPDB_PASS : "BITBOX"
 
 router.get("/", root)
 router.get("/list", list)
@@ -61,6 +64,8 @@ router.get("/validateTxid/:txid", validateSingle)
 router.get("/txDetails/:txid", txDetails)
 router.get("/tokenStats/:tokenId", tokenStatsSingle)
 router.post("/tokenStats", tokenStatsBulk)
+router.get("/transactionHistoryAllTokens/:address", txsByAddressSingle)
+router.post("/transactionHistoryAllTokens", txsByAddressBulk)
 router.get("/transactions/:tokenId/:address", txsTokenIdAddressSingle)
 router.post("/transactions", txsTokenIdAddressBulk)
 router.get("/burnTotal/:transactionId", burnTotalSingle)
@@ -85,73 +90,6 @@ if (process.env.NON_JS_FRAMEWORK && process.env.NON_JS_FRAMEWORK === "true") {
   )
 }
 
-// Retrieve raw transactions details from the full node.
-// TODO: move this function to a separate support library.
-// TODO: Add unit tests for this function.
-async function getRawTransactionsFromNode(txids: string[]): Promise<any> {
-  try {
-    const { BitboxHTTP, requestConfig } = routeUtils.setEnvVars()
-
-    const txPromises: Promise<any>[] = txids.map(
-      async (txid: string): Promise<any> => {
-
-        requestConfig.data.id = "getrawtransaction"
-        requestConfig.data.method = "getrawtransaction"
-        requestConfig.data.params = [txid, 0]
-
-        const response: any = await BitboxHTTP(requestConfig)
-        const result: AxiosResponse = response.data.result
-
-        return result
-      }
-    )
-
-    const results: any[] = await Promise.all(txPromises)
-    return results
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/getRawTransactionsFromNode().`, err)
-    throw err
-  }
-}
-
-function formatTokenOutput(token: any): TokenInterface {
-  token.tokenDetails.id = token.tokenDetails.tokenIdHex
-  delete token.tokenDetails.tokenIdHex
-  token.tokenDetails.documentHash = token.tokenDetails.documentSha256Hex
-  delete token.tokenDetails.documentSha256Hex
-  token.tokenDetails.initialTokenQty = parseFloat(
-    token.tokenDetails.genesisOrMintQuantity
-  )
-  delete token.tokenDetails.genesisOrMintQuantity
-  delete token.tokenDetails.transactionType
-  delete token.tokenDetails.batonVout
-  delete token.tokenDetails.sendOutputs
-
-  token.tokenDetails.blockCreated = token.tokenStats.block_created
-  token.tokenDetails.blockLastActiveSend =
-    token.tokenStats.block_last_active_send
-  token.tokenDetails.blockLastActiveMint =
-    token.tokenStats.block_last_active_mint
-  token.tokenDetails.txnsSinceGenesis =
-    token.tokenStats.qty_valid_txns_since_genesis
-  token.tokenDetails.validAddresses = token.tokenStats.qty_valid_token_addresses
-  token.tokenDetails.totalMinted = parseFloat(token.tokenStats.qty_token_minted)
-  token.tokenDetails.totalBurned = parseFloat(token.tokenStats.qty_token_burned)
-  token.tokenDetails.circulatingSupply = parseFloat(
-    token.tokenStats.qty_token_circulating_supply
-  )
-  token.tokenDetails.mintingBatonStatus = token.tokenStats.minting_baton_status
-
-  delete token.tokenStats.block_last_active_send
-  delete token.tokenStats.block_last_active_mint
-  delete token.tokenStats.qty_valid_txns_since_genesis
-  delete token.tokenStats.qty_valid_token_addresses
-
-  token.tokenDetails.timestampUnix = token.tokenDetails.timestamp_unix
-  delete token.tokenDetails.timestamp_unix
-  return token
-}
-
 function root(
   req: express.Request,
   res: express.Response,
@@ -166,52 +104,10 @@ async function list(
   next: express.NextFunction
 ): Promise<express.Response> {
   try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        sort: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {}
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        sort: { "tokenStats.block_created": -1 },
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    const formattedTokens: TokenInterface[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
+    const result = await slpDataService.listAllTokens()
 
     res.status(200)
-    return res.json(formattedTokens)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/list().`, err)
 
@@ -241,49 +137,10 @@ async function listSingleToken(
       })
     }
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 1000
-      }
-    }
+    const result = await slpDataService.listSingleToken(tokenId)
 
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    let token
     res.status(200)
-    if (tokenRes.data.t.length) {
-      token = formatTokenOutput(tokenRes.data.t[0])
-      return res.json(token.tokenDetails)
-    }
-    return res.json({
-      id: "not found"
-    })
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/listSingleToken().`, err)
 
@@ -321,64 +178,10 @@ async function listBulkToken(
       })
     }
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        sort: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          "tokenDetails.tokenIdHex": {
-            $in: tokenIds
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        sort: { "tokenStats.block_created": -1 },
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    const formattedTokens: any[] = []
-    const txids: string[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        txids.push(token.tokenDetails.tokenIdHex)
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
-
-    tokenIds.forEach((tokenId: string) => {
-      if (!txids.includes(tokenId)) {
-        formattedTokens.push({
-          id: tokenId,
-          valid: false
-        })
-      }
-    })
+    const result = await slpDataService.listBulkToken(tokenIds)
 
     res.status(200)
-    return res.json(formattedTokens)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/listBulkToken().`, err)
 
@@ -389,71 +192,6 @@ async function listBulkToken(
     }
     res.status(500)
     return res.json({ error: `Error in /list/:tokenId: ${err.message}` })
-  }
-}
-
-async function lookupToken(tokenId: string): Promise<any> {
-  try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 1000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-    // console.log(`tokenRes.data: ${JSON.stringify(tokenRes.data,null,2)}`)
-
-    const formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
-
-    let t: any
-    formattedTokens.forEach((token: any) => {
-      if (token.id === tokenId) t = token
-    })
-
-    // If token could not be found.
-    if (t === undefined) {
-      t = {
-        id: "not found"
-      }
-    }
-
-    return t
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/lookupToken().`, err)
-    throw err
   }
 }
 
@@ -491,133 +229,11 @@ async function balancesForAddressSingle(
       })
     }
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        aggregate: any[]
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["g"],
-        aggregate: [
-          {
-            "$match": {
-              "graphTxn.outputs": {
-                "$elemMatch": {
-                  "address": SLP.Address.toSLPAddress(address),
-                  "status": "UNSPENT",
-                  "slpAmount": { "$gte": 0 }
-                }
-              }
-            }
-          },
-          {
-            "$unwind": "$graphTxn.outputs"
-          },
-          {
-            "$match": {
-              "graphTxn.outputs.address": SLP.Address.toSLPAddress(address),
-              "graphTxn.outputs.status": "UNSPENT",
-              "graphTxn.outputs.slpAmount": { "$gte": 0 }
-            }
-          },
-          {
-            "$project": {
-              "amount": "$graphTxn.outputs.slpAmount",
-              "address": "$graphTxn.outputs.address",
-              "txid": "$graphTxn.txid",
-              "vout": "$graphTxn.outputs.vout",
-              "tokenId": "$tokenDetails.tokenIdHex"
-            }
-          },
-          {
-            "$group": {
-              "_id": "$tokenId",
-              "balanceString": {
-                "$sum": "$amount"
-              },
-              "slpAddress": {
-                "$first": "$address"
-              }
-            }
-          }
-        ],
-        limit: 10000
-      }
-    }
+    const result = await slpDataService.getBalancesForAddressSingle(address)
 
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
+    res.status(200)
+    return res.json(result)
 
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    const tokenIds: string[] = []
-    if (tokenRes.data.g.length > 0) {
-      tokenRes.data.g = tokenRes.data.g.map(token => {
-        token.tokenId = token._id
-        tokenIds.push(token.tokenId)
-        token.balance = parseFloat(token.balanceString)
-        delete token._id
-        return token
-      })
-
-      const promises = tokenIds.map(async tokenId => {
-        try {
-          const query2: {
-            v: number
-            q: {
-              db: string[]
-              find: any
-              project: any
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              db: ["t"],
-              find: {
-                $query: {
-                  "tokenDetails.tokenIdHex": tokenId
-                }
-              },
-              project: {
-                "tokenDetails.decimals": 1,
-                "tokenDetails.tokenIdHex": 1,
-                _id: 0
-              },
-              limit: 1000
-            }
-          }
-
-          const s2: string = JSON.stringify(query2)
-          const b642: string = Buffer.from(s2).toString("base64")
-          const url2: string = `${process.env.SLPDB_URL}q/${b642}`
-
-          const tokenRes2: AxiosResponse = await axios.get(url2, options)
-          return tokenRes2.data
-        } catch (err) {
-          throw err
-        }
-      })
-
-      const details: BalancesForAddress[] = await Promise.all(promises)
-      tokenRes.data.g = tokenRes.data.g.map((token: any): any => {
-        details.forEach((detail: any): any => {
-          if (detail.t[0].tokenDetails.tokenIdHex === token.tokenId)
-            token.decimalCount = detail.t[0].tokenDetails.decimals
-        })
-        return token
-      })
-
-      return res.json(tokenRes.data.g)
-    }
-    return res.json([])
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddress().`, err)
 
@@ -694,134 +310,8 @@ async function balancesForAddressBulk(
     const balancesPromises: Promise<any>[] = addresses.map(
       async (address: string) => {
         try {
-          const query: {
-            v: number
-            q: {
-              db: string[]
-              aggregate: any[]
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              db: ["g"],
-              aggregate: [
-                {
-                  "$match": {
-                    "graphTxn.outputs": {
-                      "$elemMatch": {
-                        "address": SLP.Address.toSLPAddress(address),
-                        "status": "UNSPENT",
-                        "slpAmount": { "$gte": 0 }
-                      }
-                    }
-                  }
-                },
-                {
-                  "$unwind": "$graphTxn.outputs"
-                },
-                {
-                  "$match": {
-                    "graphTxn.outputs.address": SLP.Address.toSLPAddress(address),
-                    "graphTxn.outputs.status": "UNSPENT",
-                    "graphTxn.outputs.slpAmount": { "$gte": 0 }
-                  }
-                },
-                {
-                  "$project": {
-                    "amount": "$graphTxn.outputs.slpAmount",
-                    "address": "$graphTxn.outputs.address",
-                    "txid": "$graphTxn.txid",
-                    "vout": "$graphTxn.outputs.vout",
-                    "tokenId": "$tokenDetails.tokenIdHex"
-                  }
-                },
-                {
-                  "$group": {
-                    "_id": "$tokenId",
-                    "balanceString": {
-                      "$sum": "$amount"
-                    },
-                    "slpAddress": {
-                      "$first": "$address"
-                    }
-                  }
-                }
-              ],
-              limit: 10000
-            }
-          }
-
-          const s: string = JSON.stringify(query)
-          const b64: string = Buffer.from(s).toString("base64")
-          const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-          const options = generateCredentials()
-
-          const tokenRes: AxiosResponse<any> = await axios.get(
-            url,
-            options
-          )
-
-          const tokenIds: string[] = []
-
-          if (tokenRes.data.g.length > 0) {
-            tokenRes.data.g = tokenRes.data.g.map(token => {
-              token.tokenId = token._id
-              tokenIds.push(token.tokenId)
-              token.balance = parseFloat(token.balanceString)
-              delete token._id
-              return token
-            })
-          }
-          const promises = tokenIds.map(async tokenId => {
-            try {
-              const query2: {
-                v: number
-                q: {
-                  db: string[]
-                  find: any
-                  project: any
-                  limit: number
-                }
-              } = {
-                v: 3,
-                q: {
-                  db: ["t"],
-                  find: {
-                    $query: {
-                      "tokenDetails.tokenIdHex": tokenId
-                    }
-                  },
-                  project: {
-                    "tokenDetails.decimals": 1,
-                    "tokenDetails.tokenIdHex": 1,
-                    _id: 0
-                  },
-                  limit: 1000
-                }
-              }
-
-              const s2: string = JSON.stringify(query2)
-              const b642: string = Buffer.from(s2).toString("base64")
-              const url2: string = `${process.env.SLPDB_URL}q/${b642}`
-
-              const tokenRes2: AxiosResponse = await axios.get(url2, options)
-              return tokenRes2.data
-            } catch (err) {
-              throw err
-            }
-          })
-          const details: BalancesForAddress[] = await Promise.all(promises)
-          tokenRes.data.g = tokenRes.data.g.map((token: any): any => {
-            details.forEach((detail: any): any => {
-              if (detail.t[0].tokenDetails.tokenIdHex === token.tokenId)
-                token.decimalCount = detail.t[0].tokenDetails.decimals
-            })
-            return token
-          })
-
-          return tokenRes.data.g
+          const addressResult = await slpDataService.getBalancesForAddressSingle(address)
+          return addressResult
         } catch (err) {
           throw err
         }
@@ -860,81 +350,8 @@ async function balancesForTokenSingle(
       return res.json({ error: "tokenId can not be empty" })
     }
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        aggregate: any[]
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["g"],
-        aggregate: [
-          {
-            "$match": {
-              "graphTxn.outputs": {
-                "$elemMatch": {
-                  "status": "UNSPENT",
-                  "slpAmount": { "$gte": 0 }
-                }
-              },
-              "tokenDetails.tokenIdHex": tokenId
-            }
-          },
-          {
-            "$unwind": "$graphTxn.outputs"
-          },
-          {
-            "$match": {
-              "graphTxn.outputs.status": "UNSPENT",
-              "graphTxn.outputs.slpAmount": { "$gte": 0 },
-              "tokenDetails.tokenIdHex": tokenId
-            }
-          },
-          {
-            "$project": {
-              "token_balance": "$graphTxn.outputs.slpAmount",
-              "address": "$graphTxn.outputs.address",
-              "txid": "$graphTxn.txid",
-              "vout": "$graphTxn.outputs.vout",
-              "tokenId": "$tokenDetails.tokenIdHex"
-            }
-          },
-          {
-            "$group": {
-              "_id": "$address",
-              "token_balance": {
-                "$sum": "$token_balance"
-              }
-            }
-          }
-        ],
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-    const resBalances: BalancesForToken[] = tokenRes.data.g.map(
-      (addy: any): any => {
-        addy.tokenBalance = parseFloat(addy.token_balance)
-        addy.tokenBalanceString = addy.token_balance
-        addy.slpAddress = addy._id
-        addy.tokenId = tokenId
-        delete addy._id
-        delete addy.token_balance
-        return addy
-      }
-    )
-    return res.json(resBalances)
+    const result = await slpDataService.getBalancesForTokenSingle(tokenId)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForTokenSingle().`, err)
 
@@ -987,80 +404,8 @@ async function balancesForTokenBulk(
     const tokenIdPromises: Promise<any>[] = tokenIds.map(
       async (tokenId: string) => {
         try {
-          const query: {
-            v: number
-            q: {
-              db: string[]
-              aggregate: any[]
-              limit: number
-            }
-          } = {
-            v: 3,
-            q: {
-              db: ["g"],
-              aggregate: [
-                {
-                  "$match": {
-                    "graphTxn.outputs": {
-                      "$elemMatch": {
-                        "status": "UNSPENT",
-                        "slpAmount": { "$gte": 0 }
-                      }
-                    },
-                    "tokenDetails.tokenIdHex": tokenId
-                  }
-                },
-                {
-                  "$unwind": "$graphTxn.outputs"
-                },
-                {
-                  "$match": {
-                    "graphTxn.outputs.status": "UNSPENT",
-                    "graphTxn.outputs.slpAmount": { "$gte": 0 },
-                    "tokenDetails.tokenIdHex": tokenId
-                  }
-                },
-                {
-                  "$project": {
-                    "token_balance": "$graphTxn.outputs.slpAmount",
-                    "address": "$graphTxn.outputs.address",
-                    "txid": "$graphTxn.txid",
-                    "vout": "$graphTxn.outputs.vout",
-                    "tokenId": "$tokenDetails.tokenIdHex"
-                  }
-                },
-                {
-                  "$group": {
-                    "_id": "$address",
-                    "token_balance": {
-                      "$sum": "$token_balance"
-                    }
-                  }
-                }
-              ],
-              limit: 10000
-            }
-          }
-
-          const s: string = JSON.stringify(query)
-          const b64: string = Buffer.from(s).toString("base64")
-          const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-          const options = generateCredentials()
-
-          // Get data from SLPDB.
-          const tokenRes: AxiosResponse = await axios.get(url, options)
-
-          const resBalances = tokenRes.data.g.map((addy: any): any => {
-            addy.tokenBalance = parseFloat(addy.token_balance)
-            addy.tokenBalanceString = addy.token_balance
-            addy.slpAddress = addy._id
-            addy.tokenId = tokenId
-            delete addy._id
-            delete addy.token_balance
-            return addy
-          })
-          return resBalances
+          const balanceResult = await slpDataService.getBalancesForTokenSingle(tokenId)
+          return balanceResult
         } catch (err) {
           throw err
         }
@@ -1126,108 +471,10 @@ async function balancesForAddressByTokenIDSingle(
       })
     }
 
-    // Convert input to an simpleledger: address.
-    const slpAddr: string = utils.toSlpAddress(req.params.address)
+    const result = slpDataService.getBalancesForAddressByTokenIdSingle(address, tokenId)
 
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        aggregate: any[]
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["g"],
-        aggregate: [
-          {
-            "$match": {
-              "graphTxn.outputs": {
-                "$elemMatch": {
-                  "address": slpAddr,
-                  "status": "UNSPENT",
-                  "slpAmount": { "$gte": 0 }
-                }
-              }
-            }
-          },
-          {
-            "$unwind": "$graphTxn.outputs"
-          },
-          {
-            "$match": {
-              "graphTxn.outputs.address": slpAddr,
-              "graphTxn.outputs.status": "UNSPENT",
-              "graphTxn.outputs.slpAmount": { "$gte": 0 }
-            }
-          },
-          {
-            "$project": {
-              "amount": "$graphTxn.outputs.slpAmount",
-              "address": "$graphTxn.outputs.address",
-              "txid": "$graphTxn.txid",
-              "vout": "$graphTxn.outputs.vout",
-              "tokenId": "$tokenDetails.tokenIdHex"
-            }
-          },
-          {
-            "$group": {
-              "_id": "$tokenId",
-              "balanceString": {
-                "$sum": "$amount"
-              },
-              "slpAddress": {
-                "$first": "$address"
-              }
-            }
-          }
-        ],
-        limit: 10000
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse<any> = await axios.get(url, options)
-    let resVal: BalanceForAddressByTokenId = {
-      cashAddress: utils.toCashAddress(slpAddr),
-      legacyAddress: utils.toLegacyAddress(slpAddr),
-      slpAddress: slpAddr,
-      tokenId: tokenId,
-      balance: 0,
-      balanceString: "0"
-    }
-    if (tokenRes.data.g.length > 0) {
-      tokenRes.data.g.forEach((token: any): any => {
-        if (token._id === tokenId) {
-          resVal = {
-            cashAddress: utils.toCashAddress(slpAddr),
-            legacyAddress: utils.toLegacyAddress(slpAddr),
-            slpAddress: slpAddr,
-            tokenId: token._id,
-            balance: parseFloat(token.balanceString),
-            balanceString: token.balanceString
-          }
-        }
-      })
-    } else {
-      resVal = {
-        cashAddress: utils.toCashAddress(slpAddr),
-        legacyAddress: utils.toLegacyAddress(slpAddr),
-        slpAddress: slpAddr,
-        tokenId: tokenId,
-        balance: 0,
-        balanceString: "0"
-      }
-    }
     res.status(200)
-    return res.json(resVal)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/balancesForAddressByTokenID().`, err)
 
@@ -1285,113 +532,8 @@ async function balancesForAddressByTokenIDBulk(
     })
     const tokenIdPromises: Promise<any>[] = req.body.map(async (data: any) => {
       try {
-        // Convert input to an simpleledger: address.
-        const slpAddr: string = utils.toSlpAddress(data.address)
-
-        const query: {
-          v: number
-          q: {
-            db: string[]
-            aggregate: any[]
-            limit: number
-          }
-        } = {
-          v: 3,
-          q: {
-            db: ["g"],
-            aggregate: [
-              {
-                "$match": {
-                  "graphTxn.outputs": {
-                    "$elemMatch": {
-                      "address": slpAddr,
-                      "status": "UNSPENT",
-                      "slpAmount": { "$gte": 0 }
-                    }
-                  }
-                }
-              },
-              {
-                "$unwind": "$graphTxn.outputs"
-              },
-              {
-                "$match": {
-                  "graphTxn.outputs.address": slpAddr,
-                  "graphTxn.outputs.status": "UNSPENT",
-                  "graphTxn.outputs.slpAmount": { "$gte": 0 }
-                }
-              },
-              {
-                "$project": {
-                  "amount": "$graphTxn.outputs.slpAmount",
-                  "address": "$graphTxn.outputs.address",
-                  "txid": "$graphTxn.txid",
-                  "vout": "$graphTxn.outputs.vout",
-                  "tokenId": "$tokenDetails.tokenIdHex"
-                }
-              },
-              {
-                "$group": {
-                  "_id": "$tokenId",
-                  "balanceString": {
-                    "$sum": "$amount"
-                  },
-                  "slpAddress": {
-                    "$first": "$address"
-                  }
-                }
-              }
-            ],
-            limit: 10000
-          }
-        }
-
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        const options = generateCredentials()
-
-        // Get data from SLPDB.
-        const tokenRes: AxiosResponse<any> = await axios.get(
-          url,
-          options
-        )
-
-        let resVal: BalanceForAddressByTokenId = {
-          cashAddress: utils.toCashAddress(slpAddr),
-          legacyAddress: utils.toLegacyAddress(slpAddr),
-          slpAddress: slpAddr,
-          tokenId: data.tokenId,
-          balance: 0,
-          balanceString: "0"
-        }
-        if (tokenRes.data.g.length > 0) {
-          tokenRes.data.g.forEach(
-            async (token: any): Promise<any> => {
-              if (token._id === data.tokenId) {
-                resVal = {
-                  cashAddress: utils.toCashAddress(data.address),
-                  legacyAddress: utils.toLegacyAddress(data.address),
-                  slpAddress: data.address,
-                  tokenId: token._id,
-                  balance: parseFloat(token.balanceString),
-                  balanceString: token.balanceString
-                }
-              }
-            }
-          )
-        } else {
-          resVal = {
-            cashAddress: utils.toCashAddress(data.address),
-            legacyAddress: utils.toLegacyAddress(data.address),
-            slpAddress: data.address,
-            tokenId: data.tokenId,
-            balance: 0,
-            balanceString: "0"
-          }
-        }
-        return resVal
+        const balanceResult = await slpDataService.getBalancesForAddressByTokenIdSingle(data.address, data.tokenId)
+        return balanceResult
       } catch (err) {
         throw err
       }
@@ -1510,6 +652,41 @@ async function convertAddressBulk(
   return res.json(convertedAddresses)
 }
 
+async function validateSingle(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    const txid: string = req.params.txid
+
+    // Validate input
+    if (!txid || txid === "") {
+      res.status(400)
+      return res.json({ error: "txid can not be empty" })
+    }
+
+    logger.debug(`Executing slp/validate/:txid with this txid: `, txid)
+
+    const result = await slpDataService.validateTxid(txid)
+
+    res.status(200)
+    return res.json(result)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/validateSingle().`, err)
+
+    // Attempt to decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({ error: util.inspect(err) })
+  }
+}
+
 async function validateBulk(
   req: express.Request,
   res: express.Response,
@@ -1534,151 +711,12 @@ async function validateBulk(
 
     logger.debug(`Executing slp/validate with these txids: `, txids)
 
-    const query = {
-      v: 3,
-      q: {
-        db: ["c", "u"],
-        find: {
-          "tx.h": { $in: txids }
-        },
-        limit: 300,
-        project: { "slp.valid": 1, "tx.h": 1, "slp.invalidReason": 1 }
-      }
-    }
-    const s = JSON.stringify(query)
-    const b64 = Buffer.from(s).toString("base64")
-    const url = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes = await axios.get(url, options)
-    // console.log(`tokenRes.data: ${JSON.stringify(tokenRes.data, null, 2)}`)
-
-    let formattedTokens: any[] = []
-
-    // Combine confirmed 'c' and unconfirmed 'u' collections.
-    const concatArray: any[] = tokenRes.data.c.concat(tokenRes.data.u)
-
-    const tokenIds: string[] = []
-
-    if (concatArray.length > 0) {
-      concatArray.forEach((token: any) => {
-        tokenIds.push(token.tx.h)
-
-        const validationResult: any = {
-          txid: token.tx.h,
-          valid: token.slp.valid
-        }
-
-        // If the txid is invalid, add the reason it's invalid.
-        if (!validationResult.valid)
-          validationResult.invalidReason = token.slp.invalidReason
-
-        formattedTokens.push(validationResult)
-      })
-
-      // If a user-provided txid doesn't exist in the data, add it with
-      // valid:false property.
-      txids.forEach((tokenId: string) => {
-        if (!tokenIds.includes(tokenId)) {
-          formattedTokens.push({
-            txid: tokenId,
-            valid: false
-          })
-        }
-      })
-    }
-
-    // Catch a corner case of repeated txids. SLPDB will remove redundent TXIDs,
-    // which will cause the output array to be smaller than the input array.
-    if (txids.length > formattedTokens.length) {
-      const newOutput = []
-      for (let i = 0; i < txids.length; i++) {
-        const thisTxid = txids[i]
-
-        // Find the element that matches the current txid.
-        const elem = formattedTokens.filter(x => x.txid === thisTxid)
-
-        newOutput.push(elem[0])
-      }
-
-      // Replace the original output object with the new output object.
-      formattedTokens = newOutput
-    }
-
-    res.status(200)
-    return res.json(formattedTokens)
-  } catch (err) {
-    wlogger.error(`Error in slp.ts/validateBulk().`, err)
-
-    // Attempt to decode the error message.
-    const { msg, status } = routeUtils.decodeError(err)
-    if (msg) {
-      res.status(status)
-      return res.json({ error: msg })
-    }
-
-    res.status(500)
-    return res.json({ error: util.inspect(err) })
-  }
-}
-
-async function validateSingle(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<express.Response> {
-  try {
-    const txid: string = req.params.txid
-
-    // Validate input
-    if (!txid || txid === "") {
-      res.status(400)
-      return res.json({ error: "txid can not be empty" })
-    }
-
-    logger.debug(`Executing slp/validate/:txid with this txid: `, txid)
-
-    const query = {
-      v: 3,
-      q: {
-        db: ["c", "u"],
-        find: {
-          "tx.h": txid
-        },
-        limit: 300,
-        project: { "slp.valid": 1, "tx.h": 1, "slp.invalidReason": 1 }
-      }
-    }
-
-    const options = generateCredentials()
-
-    const s = JSON.stringify(query)
-    const b64 = Buffer.from(s).toString("base64")
-    const url = `${process.env.SLPDB_URL}q/${b64}`
-
-    // Get data from SLPDB.
-    const tokenRes = await axios.get(url, options)
-
-    let result: any = {
-      txid: txid,
-      valid: false
-    }
-
-    const concatArray: any[] = tokenRes.data.c.concat(tokenRes.data.u)
-    if (concatArray.length > 0) {
-      result = {
-        txid: concatArray[0].tx.h,
-        valid: concatArray[0].slp.valid
-      }
-      if (!result.valid) result.invalidReason = concatArray[0].slp.invalidReason
-    }
+    const result = await slpDataService.validateTxidArray(txids)
 
     res.status(200)
     return res.json(result)
   } catch (err) {
-    wlogger.error(`Error in slp.ts/validateSingle().`, err)
+    wlogger.error(`Error in slp.ts/validateBulk().`, err)
 
     // Attempt to decode the error message.
     const { msg, status } = routeUtils.decodeError(err)
@@ -1705,61 +743,11 @@ async function burnTotalSingle(
 ): Promise<express.Response> {
   try {
     const txid: string = req.params.transactionId
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        aggregate: any
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["g"],
-        aggregate: [
-          {
-            $match: {
-              "graphTxn.txid": txid
-            }
-          },
-          {
-            $project: {
-              "graphTxn.txid": 1,
-              inputTotal: { $sum: "$graphTxn.inputs.slpAmount" },
-              outputTotal: { $sum: "$graphTxn.outputs.slpAmount" }
-            }
-          }
-        ],
-        limit: 1000
-      }
-    }
 
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    const burnTotal: BurnTotalResult = {
-      transactionId: txid,
-      inputTotal: 0,
-      outputTotal: 0,
-      burnTotal: 0
-    }
-
-    if (tokenRes.data.g.length) {
-      const inputTotal: number = parseFloat(tokenRes.data.g[0].inputTotal)
-      const outputTotal: number = parseFloat(tokenRes.data.g[0].outputTotal)
-      burnTotal.inputTotal = inputTotal
-      burnTotal.outputTotal = outputTotal
-      burnTotal.burnTotal = inputTotal - outputTotal
-    }
+    const result = slpDataService.getTransactionBurnTotal(txid)
 
     res.status(200)
-    return res.json(burnTotal)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/burnTotalSingle().`, err)
 
@@ -1798,59 +786,8 @@ async function burnTotalBulk(
     logger.debug(`Executing slp/burnTotal with these txids: `, txids)
 
     const txidPromises = txids.map(async (txid: string) => {
-      const query: {
-        v: number
-        q: {
-          db: string[]
-          aggregate: any
-          limit: number
-        }
-      } = {
-        v: 3,
-        q: {
-          db: ["g"],
-          aggregate: [
-            {
-              $match: {
-                "graphTxn.txid": txid
-              }
-            },
-            {
-              $project: {
-                "graphTxn.txid": 1,
-                inputTotal: { $sum: "$graphTxn.inputs.slpAmount" },
-                outputTotal: { $sum: "$graphTxn.outputs.slpAmount" }
-              }
-            }
-          ],
-          limit: 1000
-        }
-      }
-
-      const s: string = JSON.stringify(query)
-      const b64: string = Buffer.from(s).toString("base64")
-      const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-      const options = generateCredentials()
-
-      // Get data from SLPDB.
-      const tokenRes = await axios.get(url, options)
-      const burnTotal: BurnTotalResult = {
-        transactionId: txids[0],
-        inputTotal: 0,
-        outputTotal: 0,
-        burnTotal: 0
-      }
-      if (tokenRes.data.g >= 1) {
-        if (tokenRes.data.g.length) {
-          const inputTotal: number = parseFloat(tokenRes.data.g[0].inputTotal)
-          const outputTotal: number = parseFloat(tokenRes.data.g[0].outputTotal)
-          burnTotal.inputTotal = inputTotal
-          burnTotal.outputTotal = outputTotal
-          burnTotal.burnTotal = inputTotal - outputTotal
-        }
-      }
-      return burnTotal
+      const burnResult = await slpDataService.getTransactionBurnTotal(txid)
+      return burnResult
     })
     const axiosResult = await Promise.all(txidPromises)
 
@@ -2140,25 +1077,8 @@ async function txDetails(
       return res.json({ error: "This is not a txid" })
     }
 
-    const query = {
-      v: 3,
-      db: ["g"],
-      q: {
-        find: {
-          "tx.h": txid
-        },
-        limit: 300
-      }
-    }
 
-    const s = JSON.stringify(query)
-    const b64 = Buffer.from(s).toString("base64")
-    const url = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get token data from SLPDB
-    const tokenRes = await axios.get(url, options)
+    const tokenRes = await slpDataService.getTransactionDetails(txid)
     // console.log(`tokenRes: ${util.inspect(tokenRes)}`)
 
     // Format the returned data to an object.
@@ -2203,45 +1123,6 @@ async function txDetails(
 
     res.status(500)
     return res.json({ error: util.inspect(err) })
-  }
-}
-
-// Manipulates and formats the raw data comming from Insight API.
-const processInputs = (tx: TransactionInterface): any => {
-  // Add legacy and cashaddr to tx vin
-  if (tx.vin) {
-    tx.vin.forEach((vin: any): any => {
-      if (!vin.coinbase) {
-        vin.value = vin.valueSat
-        const address: string = vin.addr
-        if (address) {
-          vin.legacyAddress = bitbox.Address.toLegacyAddress(address)
-          vin.cashAddress = bitbox.Address.toCashAddress(address)
-          delete vin.addr
-        }
-        delete vin.valueSat
-        delete vin.doubleSpentTxID
-      }
-    })
-  }
-
-  // Add legacy and cashaddr to tx vout
-  if (tx.vout) {
-    tx.vout.forEach((vout: any): any => {
-      // Overwrite value string with value in satoshis
-      //vout.value = parseFloat(vout.value) * 100000000
-
-      if (vout.scriptPubKey) {
-        if (vout.scriptPubKey.addresses) {
-          const cashAddrs: string[] = []
-          vout.scriptPubKey.addresses.forEach((addr: any) => {
-            const cashAddr = bitbox.Address.toCashAddress(addr)
-            cashAddrs.push(cashAddr)
-          })
-          vout.scriptPubKey.cashAddrs = cashAddrs
-        }
-      }
-    })
   }
 }
 
@@ -2308,51 +1189,10 @@ async function tokenStatsSingle(
   }
 
   try {
-    const query: {
-      v: number
-      q: {
-        db: string[]
-        find: any
-        project: {
-          tokenDetails: number
-          tokenStats: number
-          _id: number
-        }
-        limit: number
-      }
-    } = {
-      v: 3,
-      q: {
-        db: ["t"],
-        find: {
-          $query: {
-            "tokenDetails.tokenIdHex": tokenId
-          }
-        },
-        project: { tokenDetails: 1, tokenStats: 1, _id: 0 },
-        limit: 10
-      }
-    }
-
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    const tokenRes: AxiosResponse<any> = await axios.get(url, options)
-
-    const formattedTokens: any[] = []
-
-    if (tokenRes.data.t.length) {
-      tokenRes.data.t.forEach((token: any) => {
-        token = formatTokenOutput(token)
-        formattedTokens.push(token.tokenDetails)
-      })
-    }
+    const tokenStats = await slpDataService.getTokenStats(tokenId)
 
     res.status(200)
-    return res.json(formattedTokens[0])
+    return res.json(tokenStats)
   } catch (err) {
     wlogger.error(`Error in slp.ts/tokenStats().`, err)
 
@@ -2395,54 +1235,9 @@ async function tokenStatsBulk(
   const statsPromises: Promise<any>[] = tokenIds.map(
     async (tokenId: string) => {
       try {
-        const query: {
-          v: number
-          q: {
-            db: string[]
-            find: any
-            project: {
-              tokenDetails: number
-              tokenStats: number
-              nftParentId: number
-              _id: number
-            }
-            limit: number
-          }
-        } = {
-          v: 3,
-          q: {
-            db: ["t"],
-            find: {
-              $query: {
-                "tokenDetails.tokenIdHex": tokenId
-              }
-            },
-            project: { tokenDetails: 1, tokenStats: 1, nftParentId: 1, _id: 0 },
-            limit: 10
-          }
-        }
+        const tokenStats = await slpDataService.getTokenStats(tokenId)
 
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        const options = generateCredentials()
-
-        const tokenRes: AxiosResponse<any> = await axios.get(
-          url,
-          options
-        )
-
-        const formattedTokens: any[] = []
-
-        if (tokenRes.data.t.length) {
-          tokenRes.data.t.forEach((token: any) => {
-            token = formatTokenOutput(token)
-            formattedTokens.push(token.tokenDetails)
-          })
-        }
-
-        return formattedTokens[0]
+        return tokenStats
       } catch (err) {
         throw err
       }
@@ -2455,6 +1250,157 @@ async function tokenStatsBulk(
 
   res.status(200)
   return res.json(validTxids)
+}
+
+// Retrieve transactions by address.
+async function txsByAddressSingle(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    // Validate the input data.
+    const address: string = req.params.address
+    if (!address || address === "") {
+      res.status(400)
+      return res.json({ error: "address can not be empty" })
+    }
+
+    const fromBlock: number = req.query.fromBlock
+      ? parseInt(req.query.fromBlock, 10)
+      : 0
+
+    // Ensure the input is a valid BCH address.
+    try {
+      utils.toCashAddress(address)
+    } catch (err) {
+      res.status(400)
+      return res.json({
+        error: `Invalid BCH address. Double check your address is valid: ${address}`
+      })
+    }
+
+    // Ensure it is using the correct network.
+    const cashAddr: string = utils.toCashAddress(address)
+    const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
+    if (!networkIsValid) {
+      res.status(400)
+      return res.json({
+        error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
+      })
+    }
+
+    const transactions = await slpDataService.getHistoricalSlpTransactions([address], fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
+
+    res.status(200)
+    return res.json(returnData)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsByAddressSingle().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactionHistoryAllTokens/:address: ${err.message}`
+    })
+  }
+}
+
+async function txsByAddressBulk(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<express.Response> {
+  try {
+    const addresses = req.body.addresses
+
+    // Reject if addresses is not an array
+    if (!addresses || !Array.isArray(addresses)) {
+      res.status(400)
+      return res.json({
+        error: "addresses needs to be an array. Use GET for single address."
+      })
+    }
+
+    const fromBlock: number = req.body.fromBlock
+      ? parseInt(req.body.fromBlock, 10)
+      : 0
+
+    // Enforce array size rate limits
+    if (!routeUtils.validateArraySize(req, addresses)) {
+      res.status(429)
+      return res.json({
+        error: `Array too large.`
+      })
+    }
+
+    // Validate each address
+    for (let address of addresses) {
+      // Validate input data.
+      if (!address || address === "") {
+        res.status(400)
+        return res.json({ error: "address can not be empty" })
+      }
+
+      // Ensure the input is a valid BCH address.
+      try {
+        utils.toCashAddress(address)
+      } catch (err) {
+        res.status(400)
+        return res.json({
+          error: `Invalid BCH address. Double check your address is valid: ${address}`
+        })
+      }
+
+      // Ensure it is using the correct network.
+      const cashAddr: string = utils.toCashAddress(address)
+      const networkIsValid: boolean = routeUtils.validateNetwork(cashAddr)
+      if (!networkIsValid) {
+        res.status(400)
+        return res.json({
+          error: `Invalid network. Trying to use a testnet address on mainnet, or vice versa.`
+        })
+      }
+    }
+
+    const transactions = await slpDataService.getHistoricalSlpTransactions(addresses, fromBlock)
+
+    // Structure result data with paginated format for compatibility
+    const returnData = {
+      txs: transactions,
+      pagesTotal: 1,
+      currentPage: 0,
+    }
+
+    res.status(200)
+    return res.json(returnData)
+  } catch (err) {
+    wlogger.error(`Error in slp.ts/txsByAddressBulk().`, err)
+
+    // Decode the error message.
+    const { msg, status } = routeUtils.decodeError(err)
+    if (msg) {
+      res.status(status)
+      return res.json({ error: msg })
+    }
+
+    res.status(500)
+    return res.json({
+      error: `Error in /transactionHistoryAllTokens ${err.message}`
+    })
+  }
 }
 
 // Retrieve transactions by tokenId and address.
@@ -2477,47 +1423,9 @@ async function txsTokenIdAddressSingle(
       return res.json({ error: "address can not be empty" })
     }
 
-    const query: {
-      v: number
-      q: any
-      r: any
-    } = {
-      v: 3,
-      q: {
-        find: {
-          db: ["c", "u"],
-          $query: {
-            $or: [
-              {
-                "in.e.a": address
-              },
-              {
-                "out.e.a": address
-              }
-            ],
-            "slp.detail.tokenIdHex": tokenId
-          },
-          $orderby: {
-            "blk.i": -1
-          }
-        },
-        limit: 100
-      },
-      r: {
-        f: "[.[] | { txid: .tx.h, tokenDetails: .slp } ]"
-      }
-    }
+    const result = await slpDataService.getTransactionsByTokenIdAddressSingle(tokenId, address)
 
-    const s: string = JSON.stringify(query)
-    const b64: string = Buffer.from(s).toString("base64")
-    const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-    const options = generateCredentials()
-
-    // Get data from SLPDB.
-    const tokenRes: AxiosResponse = await axios.get(url, options)
-
-    return res.json(tokenRes.data.c)
+    return res.json(result)
   } catch (err) {
     wlogger.error(`Error in slp.ts/txsTokenIdAddressSingle().`, err)
 
@@ -2576,50 +1484,9 @@ async function txsTokenIdAddressBulk(
 
     const tokenIdPromises: Promise<any>[] = req.body.map(async (data: any) => {
       try {
-        // Convert input to an simpleledger: address.
-        const slpAddr: string = utils.toSlpAddress(data.address)
+        const result = await slpDataService.getTransactionsByTokenIdAddressSingle(data.tokenId, data.address)
 
-        const query: {
-          v: number
-          q: any
-          r: any
-        } = {
-          v: 3,
-          q: {
-            find: {
-              db: ["c", "u"],
-              $query: {
-                $or: [
-                  {
-                    "in.e.a": slpAddr
-                  },
-                  {
-                    "out.e.a": slpAddr
-                  }
-                ],
-                "slp.detail.tokenIdHex": data.tokenId
-              },
-              $orderby: {
-                "blk.i": -1
-              }
-            },
-            limit: 100
-          },
-          r: {
-            f: "[.[] | { txid: .tx.h, tokenDetails: .slp } ]"
-          }
-        }
-
-        const s: string = JSON.stringify(query)
-        const b64: string = Buffer.from(s).toString("base64")
-        const url: string = `${process.env.SLPDB_URL}q/${b64}`
-
-        const options = generateCredentials()
-
-        // Get data from SLPDB.
-        const tokenRes: AxiosResponse = await axios.get(url, options)
-
-        return tokenRes.data.c
+        return result
       } catch (err) {
         throw err
       }
@@ -2642,24 +1509,6 @@ async function txsTokenIdAddressBulk(
       error: `Error in /transactions/:tokenId/:address: ${err.message}`
     })
   }
-}
-
-function generateCredentials() {
-  // Generate the Basic Authentication header for a private instance of SLPDB.
-  const username = "BITBOX"
-  const password = SLPDB_PASS
-  const combined = `${username}:${password}`
-  var base64Credential = Buffer.from(combined).toString("base64")
-  var readyCredential = `Basic ${base64Credential}`
-
-  const options = {
-    headers: {
-      authorization: readyCredential,
-      timeout: 30000
-    }
-  }
-
-  return options
 }
 
 module.exports = {
@@ -2688,8 +1537,9 @@ module.exports = {
     balancesForTokenBulk,
     txsTokenIdAddressSingle,
     txsTokenIdAddressBulk,
+    txsByAddressSingle,
+    txsByAddressBulk,
     burnTotalSingle,
-    burnTotalBulk,
-    lookupToken
+    burnTotalBulk
   }
 }
