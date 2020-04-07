@@ -6,8 +6,6 @@
 
 More info: [developer.bitcoin.com](https://developer.bitcoin.com). Chatroom [http://geni.us/CashDev](geni.us/CashDev)
 
-Testnet available at [trest.bitcoin.com](https://trest.bitcoin.com)
-
 ## Usage
 
 You can also run an instance of REST for your own full node.
